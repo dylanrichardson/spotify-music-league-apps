@@ -151,5 +151,5 @@ export function logout(): void {
   localStorage.removeItem('code_verifier');
   localStorage.removeItem('cached_library');
   localStorage.removeItem('user_profile');
-  window.location.href = '/';
+  window.location.href = '/spotify-music-league-apps/';
 }

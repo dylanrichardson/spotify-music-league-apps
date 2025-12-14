@@ -25,6 +25,7 @@ export function Dashboard() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [sortBy, setSortBy] = useState<'year' | 'artist' | 'name' | 'album'>('year');
   const [playlistSearch, setPlaylistSearch] = useState('');
+  const [loadingPlaylists, setLoadingPlaylists] = useState(true);
 
   useEffect(() => {
     loadProfile();
@@ -47,6 +48,8 @@ export function Dashboard() {
       setPlaylists(userPlaylists);
     } catch (err) {
       console.error('Failed to load playlists:', err);
+    } finally {
+      setLoadingPlaylists(false);
     }
   };
 
@@ -246,8 +249,18 @@ export function Dashboard() {
               <div className="text-2xl">💿</div>
             </div>
 
+            {/* Playlists Loading */}
+            {loadingPlaylists && (
+              <div className="border-t-2 border-gray-200 pt-4">
+                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500"></div>
+                  <span className="text-sm text-gray-600">Loading your playlists...</span>
+                </div>
+              </div>
+            )}
+
             {/* Playlists Section */}
-            {playlists.length > 0 && (
+            {!loadingPlaylists && playlists.length > 0 && (
               <div className="border-t-2 border-gray-200 pt-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-semibold text-gray-700">Or choose a playlist</span>
