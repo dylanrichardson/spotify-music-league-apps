@@ -26,6 +26,16 @@ interface PlayerState {
   };
 }
 
+export interface SpotifyDevice {
+  id: string;
+  name: string;
+  type: string;
+  is_active: boolean;
+  is_private_session: boolean;
+  is_restricted: boolean;
+  volume_percent: number;
+}
+
 export type PlaybackMode = 'sdk' | 'connect' | null;
 
 class SpotifyPlayerManager {
@@ -34,6 +44,7 @@ class SpotifyPlayerManager {
   private mode: PlaybackMode = null;
   private onStateChangeCallback: ((state: PlayerState | null) => void) | null = null;
   private sdkReadyPromise: Promise<void> | null = null;
+  private pollingInterval: number | null = null;
 
   constructor() {
     // Set up the SDK ready callback
@@ -292,7 +303,125 @@ class SpotifyPlayerManager {
     return this.mode;
   }
 
+  async getAvailableDevices(): Promise<SpotifyDevice[]> {
+    const tokens = getStoredTokens();
+    if (!tokens) {
+      throw new Error('No authentication tokens');
+    }
+
+    const response = await fetch('https://api.spotify.com/v1/me/player/devices', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch devices');
+    }
+
+    const data = await response.json();
+    return data.devices;
+  }
+
+  async getCurrentPlaybackState(): Promise<PlayerState | null> {
+    const tokens = getStoredTokens();
+    if (!tokens) {
+      return null;
+    }
+
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+      },
+    });
+
+    if (response.status === 204 || !response.ok) {
+      // No active playback
+      return null;
+    }
+
+    const data = await response.json();
+
+    if (!data.item) {
+      return null;
+    }
+
+    // Convert Spotify API response to PlayerState format
+    return {
+      paused: !data.is_playing,
+      position: data.progress_ms,
+      duration: data.item.duration_ms,
+      track_window: {
+        current_track: {
+          id: data.item.id,
+          name: data.item.name,
+          artists: data.item.artists.map((a: any) => ({ name: a.name })),
+          album: {
+            name: data.item.album.name,
+            images: data.item.album.images,
+          },
+          uri: data.item.uri,
+        },
+      },
+    };
+  }
+
+  startPolling(intervalMs: number = 3000): void {
+    if (this.pollingInterval !== null) {
+      return; // Already polling
+    }
+
+    this.pollingInterval = window.setInterval(async () => {
+      const state = await this.getCurrentPlaybackState();
+      if (this.onStateChangeCallback) {
+        this.onStateChangeCallback(state);
+      }
+    }, intervalMs);
+  }
+
+  stopPolling(): void {
+    if (this.pollingInterval !== null) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
+    }
+  }
+
+  async transferPlaybackToDevice(deviceId: string): Promise<void> {
+    const tokens = getStoredTokens();
+    if (!tokens) {
+      throw new Error('No authentication tokens');
+    }
+
+    const response = await fetch('https://api.spotify.com/v1/me/player', {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        device_ids: [deviceId],
+        play: true,
+      }),
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error('Failed to transfer playback');
+    }
+
+    // Update our device ID if transferring to our SDK device
+    if (this.mode === 'sdk') {
+      const devices = await this.getAvailableDevices();
+      const ourDevice = devices.find(d => d.name === 'Music League Helper');
+      if (ourDevice && ourDevice.id === deviceId) {
+        this.deviceId = deviceId;
+      }
+    }
+  }
+
   disconnect(): void {
+    this.stopPolling();
     if (this.player) {
       this.player.disconnect();
       this.player = null;
