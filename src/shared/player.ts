@@ -45,6 +45,7 @@ class SpotifyPlayerManager {
   private onStateChangeCallback: ((state: PlayerState | null) => void) | null = null;
   private sdkReadyPromise: Promise<void> | null = null;
   private pollingInterval: number | null = null;
+  private hasLocalPlayback: boolean = false;
 
   constructor() {
     // Set up the SDK ready callback
@@ -146,6 +147,22 @@ class SpotifyPlayerManager {
 
       // Player state updates
       this.player.addListener('player_state_changed', (state) => {
+        // Track if we have local playback
+        const hasPlayback = state !== null && state.track_window?.current_track !== null;
+
+        // If we just got local playback, stop polling (SDK will handle updates)
+        if (hasPlayback && !this.hasLocalPlayback) {
+          console.log('Local playback detected, stopping API polling');
+          this.stopPolling();
+        }
+        // If we lost local playback, start polling (to detect playback on other devices)
+        else if (!hasPlayback && this.hasLocalPlayback) {
+          console.log('Local playback ended, resuming API polling');
+          this.startPolling(10000);
+        }
+
+        this.hasLocalPlayback = hasPlayback;
+
         if (this.onStateChangeCallback) {
           this.onStateChangeCallback(state);
         }
@@ -368,11 +385,12 @@ class SpotifyPlayerManager {
     };
   }
 
-  startPolling(intervalMs: number = 3000): void {
+  startPolling(intervalMs: number = 10000): void {
     if (this.pollingInterval !== null) {
       return; // Already polling
     }
 
+    console.log(`Starting API polling every ${intervalMs}ms`);
     this.pollingInterval = window.setInterval(async () => {
       const state = await this.getCurrentPlaybackState();
       if (this.onStateChangeCallback) {

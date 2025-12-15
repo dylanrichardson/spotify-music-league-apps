@@ -88,12 +88,14 @@ export function Dashboard() {
       });
       console.log('Playback mode:', mode === 'sdk' ? 'Web Playback SDK (Premium)' : 'Spotify Connect (Fallback)');
 
-      // Start polling for playback state (works for both SDK and Connect modes)
-      playerManager.startPolling(3000);
+      // Start polling for playback state to detect playback on other devices
+      // SDK mode: Will auto-stop polling when local playback starts
+      // Connect mode: Will continue polling
+      playerManager.startPolling();
     } catch (err) {
       console.error('Failed to initialize player:', err);
-      // Still start polling even if SDK fails
-      playerManager.startPolling(3000);
+      // Still start polling even if SDK fails (Connect mode fallback)
+      playerManager.startPolling();
     }
   };
 
