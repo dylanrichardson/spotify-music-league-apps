@@ -198,9 +198,24 @@ class SpotifyPlayerManager {
         const error = await response.json();
         console.error('Playback error:', error);
 
-        // If device not found, try to transfer playback first
+        // If device not found, refresh our device ID and retry
         if (response.status === 404) {
+          console.log('Device not found, refreshing device ID...');
+
+          // Re-fetch our device ID in case it changed
+          try {
+            this.deviceId = await this.getActiveDeviceId();
+            console.log('Refreshed device ID:', this.deviceId);
+          } catch (err) {
+            console.warn('Failed to refresh device ID, will try to activate:', err);
+          }
+
+          // Transfer playback to our (possibly refreshed) device
           await this.transferPlayback();
+
+          // Wait a bit for activation to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+
           // Retry playback
           const retryResponse = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
             method: 'PUT',
@@ -214,7 +229,9 @@ class SpotifyPlayerManager {
           });
 
           if (!retryResponse.ok) {
-            throw new Error('Failed to start playback via SDK after transfer');
+            const retryError = await retryResponse.json();
+            console.error('Retry playback error:', retryError);
+            throw new Error('Failed to start playback. Please try again or select a different device.');
           }
         } else {
           throw new Error('Failed to start playback via SDK');
@@ -242,11 +259,49 @@ class SpotifyPlayerManager {
     } else {
       throw new Error('Player not initialized');
     }
+
+    // Immediately poll to update UI, then start fast polling for quick updates
+    await this.pollOnce();
+    this.startFastPolling(10000); // Fast polling for 10 seconds
   }
 
   async togglePlay(): Promise<void> {
-    if (this.mode === 'sdk' && this.player) {
+    const tokens = getStoredTokens();
+    if (!tokens) {
+      throw new Error('No authentication tokens');
+    }
+
+    // Check if we have local playback
+    if (this.mode === 'sdk' && this.player && this.hasLocalPlayback) {
+      // Use SDK for local playback
       await this.player.togglePlay();
+    } else {
+      // Use Web API for remote playback or Connect mode
+      const currentState = await this.getCurrentPlaybackState();
+      if (!currentState) {
+        throw new Error('No active playback');
+      }
+
+      const endpoint = currentState.paused
+        ? 'https://api.spotify.com/v1/me/player/play'
+        : 'https://api.spotify.com/v1/me/player/pause';
+
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+      });
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error('Failed to toggle playback');
+      }
+
+      // Immediately poll to update UI
+      const state = await this.getCurrentPlaybackState();
+      if (this.onStateChangeCallback) {
+        this.onStateChangeCallback(state);
+      }
     }
   }
 
@@ -318,6 +373,10 @@ class SpotifyPlayerManager {
 
   getMode(): PlaybackMode {
     return this.mode;
+  }
+
+  getCurrentDeviceId(): string | null {
+    return this.deviceId;
   }
 
   async getAvailableDevices(): Promise<SpotifyDevice[]> {
@@ -404,6 +463,29 @@ class SpotifyPlayerManager {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
+  }
+
+  async pollOnce(): Promise<void> {
+    const state = await this.getCurrentPlaybackState();
+    if (this.onStateChangeCallback) {
+      this.onStateChangeCallback(state);
+    }
+  }
+
+  startFastPolling(durationMs: number = 10000): void {
+    // Stop regular polling
+    this.stopPolling();
+
+    // Start fast polling (2 seconds)
+    console.log('Starting fast polling for', durationMs, 'ms');
+    this.startPolling(2000);
+
+    // After duration, switch back to normal polling
+    setTimeout(() => {
+      this.stopPolling();
+      this.startPolling(10000);
+      console.log('Switched back to normal polling');
+    }, durationMs);
   }
 
   async transferPlaybackToDevice(deviceId: string): Promise<void> {
