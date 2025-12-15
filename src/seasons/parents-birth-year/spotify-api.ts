@@ -294,3 +294,26 @@ export function getYearRange(birthYear: number): { start: number; end: number } 
     end: birthYear,
   };
 }
+
+// Play a track on the user's active device
+export async function playTrack(trackUri: string): Promise<void> {
+  const accessToken = await getAccessToken();
+
+  const response = await fetch(`${API_BASE}/me/player/play`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      uris: [trackUri],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('No active device found. Please open Spotify on one of your devices.');
+    }
+    throw new Error('Failed to start playback');
+  }
+}

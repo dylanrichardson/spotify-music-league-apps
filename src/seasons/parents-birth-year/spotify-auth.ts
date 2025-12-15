@@ -9,6 +9,9 @@ const SCOPES = [
   'user-library-read',
   'playlist-read-private',
   'playlist-read-collaborative',
+  'user-read-playback-state',
+  'user-modify-playback-state',
+  'streaming',
 ];
 
 // Generate code verifier for PKCE

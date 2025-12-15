@@ -6,6 +6,7 @@ import {
   fetchPlaylistTracks,
   filterTracksByYears,
   getYearRange,
+  playTrack,
 } from '../spotify-api';
 import { fetchUserProfile } from '../spotify-api';
 import { logout } from '../spotify-auth';
@@ -27,6 +28,8 @@ export function Dashboard() {
   const [playlistSearch, setPlaylistSearch] = useState('');
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
   const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -71,6 +74,19 @@ export function Dashboard() {
         return sorted.sort((a, b) => a.album.name.localeCompare(b.album.name));
       default:
         return sorted;
+    }
+  };
+
+  const handlePlayTrack = async (track: SpotifyTrack) => {
+    setPlaybackError(null);
+    setPlayingTrackId(track.id);
+
+    try {
+      await playTrack(track.uri);
+    } catch (err) {
+      setPlaybackError(err instanceof Error ? err.message : 'Failed to play track');
+      setPlayingTrackId(null);
+      console.error('Playback error:', err);
     }
   };
 
@@ -400,6 +416,26 @@ export function Dashboard() {
                 </div>
               </div>
 
+              {/* Playback Error */}
+              {playbackError && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+                  <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">{playbackError}</p>
+                  </div>
+                  <button
+                    onClick={() => setPlaybackError(null)}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+
               {/* Sort buttons - visible on mobile */}
               {viewMode === 'list' && (
                 <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
@@ -454,29 +490,45 @@ export function Dashboard() {
                   {getSortedTracks(filteredTracks).map((track) => (
                     <div key={track.id} className="border-b border-gray-100 last:border-0">
                       <div className="flex items-center gap-3 py-3 px-2">
-                        {/* Album Cover */}
-                        {track.album.images[0] && (
-                          <img
-                            src={track.album.images[0].url}
-                            alt={track.album.name}
-                            className="w-12 h-12 rounded object-contain bg-gray-100 flex-shrink-0"
-                          />
-                        )}
+                        {/* Clickable area for playback */}
+                        <button
+                          onClick={() => handlePlayTrack(track)}
+                          className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                        >
+                          {/* Album Cover */}
+                          {track.album.images[0] && (
+                            <div className="relative">
+                              <img
+                                src={track.album.images[0].url}
+                                alt={track.album.name}
+                                className="w-12 h-12 rounded object-contain bg-gray-100 flex-shrink-0"
+                              />
+                              {/* Play indicator */}
+                              {playingTrackId === track.id && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded">
+                                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                                  </svg>
+                                </div>
+                              )}
+                            </div>
+                          )}
 
-                        {/* Song & Artist stacked */}
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {track.name}
+                          {/* Song & Artist stacked */}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-sm text-gray-900 truncate">
+                              {track.name}
+                            </div>
+                            <div className="text-xs text-gray-500 truncate">
+                              {track.artists.map((a) => a.name).join(', ')}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {track.artists.map((a) => a.name).join(', ')}
-                          </div>
-                        </div>
 
-                        {/* Year */}
-                        <div className="text-xs text-gray-600 font-medium flex-shrink-0">
-                          {track.album.release_date.split('-')[0]}
-                        </div>
+                          {/* Year */}
+                          <div className="text-xs text-gray-600 font-medium flex-shrink-0">
+                            {track.album.release_date.split('-')[0]}
+                          </div>
+                        </button>
 
                         {/* Expand button */}
                         <button
@@ -561,15 +613,25 @@ export function Dashboard() {
                       {getSortedTracks(filteredTracks).map((track) => (
                         <tr
                           key={track.id}
-                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
+                          onClick={() => handlePlayTrack(track)}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors group cursor-pointer"
                         >
                           <td className="py-2 px-4">
                             {track.album.images[0] && (
-                              <img
-                                src={track.album.images[0].url}
-                                alt={track.album.name}
-                                className="w-10 h-10 rounded object-contain bg-gray-100"
-                              />
+                              <div className="relative">
+                                <img
+                                  src={track.album.images[0].url}
+                                  alt={track.album.name}
+                                  className="w-10 h-10 rounded object-contain bg-gray-100"
+                                />
+                                {playingTrackId === track.id && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded">
+                                    <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="py-2 px-4 text-sm font-medium text-gray-800 truncate max-w-xs">
@@ -589,6 +651,7 @@ export function Dashboard() {
                               href={`https://open.spotify.com/track/${track.id}`}
                               target="_blank"
                               rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               className="text-xs text-green-600 hover:text-green-700 font-semibold opacity-0 group-hover:opacity-100 transition-opacity inline-block"
                             >
                               Open ↗
