@@ -404,9 +404,9 @@ export function Dashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-gray-200">
-                      <th className="py-3 px-4 w-12"></th>
+                      <th className="py-2 md:py-3 px-1 md:px-4 w-10 md:w-12"></th>
                       <th
-                        className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
                         onClick={() => setSortBy('name')}
                       >
                         <div className="flex items-center gap-1">
@@ -415,7 +415,7 @@ export function Dashboard() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none hidden sm:table-cell"
                         onClick={() => setSortBy('artist')}
                       >
                         <div className="flex items-center gap-1">
@@ -424,7 +424,7 @@ export function Dashboard() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none hidden lg:table-cell"
                         onClick={() => setSortBy('album')}
                       >
                         <div className="flex items-center gap-1">
@@ -433,7 +433,7 @@ export function Dashboard() {
                         </div>
                       </th>
                       <th
-                        className="text-left py-3 px-4 text-sm font-semibold text-gray-700 w-20 cursor-pointer hover:bg-gray-50 select-none"
+                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 w-14 md:w-20 cursor-pointer hover:bg-gray-50 select-none"
                         onClick={() => setSortBy('year')}
                       >
                         <div className="flex items-center gap-1">
@@ -441,7 +441,7 @@ export function Dashboard() {
                           {sortBy === 'year' && <span className="text-blue-600">↓</span>}
                         </div>
                       </th>
-                      <th className="py-3 px-4 w-24"></th>
+                      <th className="py-2 md:py-3 px-1 md:px-4 w-12 md:w-24"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -450,35 +450,36 @@ export function Dashboard() {
                         key={track.id}
                         className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
                       >
-                        <td className="py-2 px-4">
+                        <td className="py-1.5 md:py-2 px-1 md:px-4">
                           {track.album.images[0] && (
                             <img
                               src={track.album.images[0].url}
                               alt={track.album.name}
-                              className="w-10 h-10 rounded object-cover"
+                              className="w-8 h-8 md:w-10 md:h-10 rounded object-contain bg-gray-100"
                             />
                           )}
                         </td>
-                        <td className="py-2 px-4 text-sm font-medium text-gray-800 truncate max-w-xs">
-                          {track.name}
+                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm font-medium text-gray-800">
+                          <div className="truncate max-w-[120px] md:max-w-xs">{track.name}</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[120px] sm:hidden">{track.artists.map((a) => a.name).join(', ')}</div>
                         </td>
-                        <td className="py-2 px-4 text-sm text-gray-600 truncate max-w-xs">
+                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-600 truncate max-w-xs hidden sm:table-cell">
                           {track.artists.map((a) => a.name).join(', ')}
                         </td>
-                        <td className="py-2 px-4 text-sm text-gray-500 truncate max-w-xs">
+                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-500 truncate max-w-xs hidden lg:table-cell">
                           {track.album.name}
                         </td>
-                        <td className="py-2 px-4 text-sm text-gray-500">
+                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-500">
                           {track.album.release_date.split('-')[0]}
                         </td>
-                        <td className="py-2 px-4">
+                        <td className="py-1.5 md:py-2 px-1 md:px-4">
                           <a
                             href={`https://open.spotify.com/track/${track.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-green-600 hover:text-green-700 font-semibold opacity-0 group-hover:opacity-100 transition-opacity inline-block"
+                            className="text-xs text-green-600 hover:text-green-700 font-semibold md:opacity-0 md:group-hover:opacity-100 transition-opacity inline-block"
                           >
-                            Open ↗
+                            ↗
                           </a>
                         </td>
                       </tr>
