@@ -310,21 +310,19 @@ export function Dashboard() {
       <div className={`container mx-auto px-4 py-4 md:py-8 ${playbackMode === 'sdk' && playerState?.track_window?.current_track ? 'pb-24' : ''}`}>
         {/* Header */}
         <div className="bg-white rounded-lg shadow-xl p-4 md:p-6 mb-4 md:mb-8 max-w-4xl mx-auto">
-          <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
-            <div className="flex items-center gap-3 md:gap-4">
+          {/* Top bar: Profile + Navigation */}
+          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
               {profile?.images?.[0]?.url && (
                 <img
                   src={profile.images[0].url}
                   alt={profile.display_name}
-                  className="w-10 h-10 md:w-12 md:h-12 rounded-full flex-shrink-0"
+                  className="w-10 h-10 rounded-full"
                 />
               )}
-              <div className="min-w-0">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-800 break-words">
-                  Round 2: Hidden Gems
-                </h1>
-                <p className="text-sm md:text-base text-gray-600 truncate">Welcome, {profile?.display_name || 'User'}!</p>
-              </div>
+              <span className="text-sm md:text-base text-gray-700 font-medium">
+                {profile?.display_name || 'User'}
+              </span>
             </div>
             <div className="flex items-center gap-2 md:gap-3">
               <Link
@@ -340,6 +338,19 @@ export function Dashboard() {
                 Logout
               </button>
             </div>
+          </div>
+
+          {/* Round Title */}
+          <div className="text-center">
+            <div className="inline-block bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full mb-2">
+              ROUND 2
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              Hidden gems
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 mt-2">
+              Best song from an artist with under 100k monthly listeners
+            </p>
           </div>
         </div>
 
