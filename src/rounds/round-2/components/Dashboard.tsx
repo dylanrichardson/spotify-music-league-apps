@@ -1027,28 +1027,47 @@ export function Dashboard() {
                           No devices found
                         </div>
                       ) : (
-                        availableDevices.map((device) => (
-                          <button
-                            key={device.id}
-                            onClick={() => handleDeviceChange(device.id)}
-                            className={`w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-3 ${
-                              device.is_active ? 'bg-gray-700' : ''
-                            }`}
-                          >
-                            <svg className="w-5 h-5 text-gray-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                            </svg>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm text-white truncate">{device.name}</div>
-                              <div className="text-xs text-gray-400">{device.type}</div>
-                            </div>
-                            {device.is_active && (
-                              <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                            )}
-                          </button>
-                        ))
+                        // Sort devices: "Music League Helper" (this device) first, then others
+                        availableDevices
+                          .sort((a, b) => {
+                            const aIsThis = a.name === 'Music League Helper';
+                            const bIsThis = b.name === 'Music League Helper';
+                            if (aIsThis && !bIsThis) return -1;
+                            if (!aIsThis && bIsThis) return 1;
+                            return 0;
+                          })
+                          .map((device) => {
+                            const isThisDevice = device.name === 'Music League Helper';
+                            return (
+                              <button
+                                key={device.id}
+                                onClick={() => handleDeviceChange(device.id)}
+                                className={`w-full text-left px-4 py-3 hover:bg-gray-700 transition-colors flex items-center gap-3 ${
+                                  device.is_active ? 'bg-gray-700' : ''
+                                } ${isThisDevice ? 'border-b-2 border-gray-600' : ''}`}
+                              >
+                                <svg className={`w-5 h-5 flex-shrink-0 ${isThisDevice ? 'text-blue-400' : 'text-gray-400'}`} fill="currentColor" viewBox="0 0 20 20">
+                                  <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                                </svg>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-sm text-white truncate">{device.name}</div>
+                                    {isThisDevice && (
+                                      <span className="text-xs font-semibold text-blue-400 bg-blue-900 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                        This Browser
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-400">{device.type}</div>
+                                </div>
+                                {device.is_active && (
+                                  <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </button>
+                            );
+                          })
                       )}
                     </div>
                   </div>
