@@ -9,11 +9,12 @@ import {
   getLibraryLastSync,
   getPlaylistsLastSync,
   fetchUserProfile,
-  fetchArtist,
+  batchFetchArtistFollowers,
 } from '../../../shared/spotify-api';
 import { logout } from '../../../shared/spotify-auth';
 import type { SpotifyTrack, SpotifyPlaylist, UserProfile } from '../../../rounds/types';
 import { playerManager, type PlaybackMode } from '../../../shared/player';
+import { useToast } from '../../../shared/toast';
 
 // Format follower count with commas
 function formatFollowers(count: number | undefined): string {
@@ -27,6 +28,7 @@ interface TrackWithFollowers extends SpotifyTrack {
 }
 
 export function Dashboard() {
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [maxFollowers, setMaxFollowers] = useState('100000');
   const [filteredTracks, setFilteredTracks] = useState<TrackWithFollowers[]>([]);
@@ -63,9 +65,11 @@ export function Dashboard() {
     };
   }, []);
 
-  const updateLastSyncTimes = () => {
-    setLibraryLastSync(getLibraryLastSync());
-    setPlaylistsLastSync(getPlaylistsLastSync());
+  const updateLastSyncTimes = async () => {
+    const libSync = await getLibraryLastSync();
+    const playlistSync = await getPlaylistsLastSync();
+    setLibraryLastSync(libSync);
+    setPlaylistsLastSync(playlistSync);
   };
 
   const initializePlayer = async () => {
@@ -244,48 +248,48 @@ export function Dashboard() {
 
       if (selectedPlaylist === 'library') {
         setLoadingLibrary(true);
-        await fetchLibraryTracks(collectTracks);
+        await fetchLibraryTracks(collectTracks, false, showToast);
         setLoadingLibrary(false);
       } else {
         await fetchPlaylistTracks(selectedPlaylist, collectTracks);
       }
 
       // Now filter by artist followers
-      // Fetch artist data and filter tracks
-      const artistFollowerMap = new Map<string, number>();
-      const tracksWithFollowers: TrackWithFollowers[] = [];
-
-      let processedTracks = 0;
+      // Get unique artist IDs from all tracks
+      const uniqueArtistIds = new Set<string>();
       for (const track of allTracks) {
-        processedTracks++;
-        setProgress({ current: processedTracks, total: allTracks.length });
+        const artistId = track.artists[0]?.id;
+        if (artistId) {
+          uniqueArtistIds.add(artistId);
+        }
+      }
 
-        try {
-          // Get the first artist ID from the track's artists array
-          const artistId = track.artists[0]?.id;
+      // Batch fetch all artist follower counts with parallelization
+      const artistIds = Array.from(uniqueArtistIds);
+      const artistFollowerMap = await batchFetchArtistFollowers(
+        artistIds,
+        (current, total) => {
+          setProgress({ current, total });
+        }
+      );
 
-          if (!artistId) {
-            console.warn(`No artist ID found for track ${track.name}`);
-            continue;
-          }
+      // Filter tracks based on follower counts
+      const tracksWithFollowers: TrackWithFollowers[] = [];
+      for (const track of allTracks) {
+        const artistId = track.artists[0]?.id;
 
-          // Check if we already have this artist's follower count
-          if (!artistFollowerMap.has(artistId)) {
-            const artist = await fetchArtist(artistId);
-            artistFollowerMap.set(artistId, artist.followers.total);
-          }
+        if (!artistId) {
+          console.warn(`No artist ID found for track ${track.name}`);
+          continue;
+        }
 
-          const followerCount = artistFollowerMap.get(artistId) || 0;
+        const followerCount = artistFollowerMap.get(artistId);
 
-          if (followerCount < maxFollowersNum) {
-            tracksWithFollowers.push({
-              ...track,
-              followerCount,
-            });
-          }
-        } catch (err) {
-          console.error(`Failed to fetch artist data for track ${track.name}:`, err);
-          // Continue processing other tracks
+        if (followerCount !== undefined && followerCount < maxFollowersNum) {
+          tracksWithFollowers.push({
+            ...track,
+            followerCount,
+          });
         }
       }
 

@@ -1,8 +1,12 @@
 import type { SpotifyTrack, SpotifyPlaylist, UserProfile, CachedLibrary, CachedTrack, CachedPlaylist, CachedPlaylists } from '../rounds/types';
 import { getStoredTokens, refreshAccessToken } from './spotify-auth';
+import { idbGet, idbSet, idbDelete, idbCleanupExpiredArtists, migrateFromLocalStorage } from './indexeddb';
 
 // Cache version - increment this when making breaking changes to cache structure
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3; // Bumped for IndexedDB migration
+
+// Artist follower cache TTL: 7 days
+const ARTIST_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 // Convert SpotifyTrack to minimal CachedTrack
 function toMinimalTrack(track: SpotifyTrack): CachedTrack {
@@ -77,24 +81,88 @@ async function getAccessToken(): Promise<string> {
   return tokens.access_token;
 }
 
-// Make authenticated API request
-async function fetchFromSpotify<T>(endpoint: string): Promise<T> {
-  const accessToken = await getAccessToken();
+/**
+ * Retry logic with exponential backoff for Spotify API
+ */
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  initialDelay: number = 1000
+): Promise<T> {
+  let lastError: Error | null = null;
 
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      lastError = err;
 
-  if (!response.ok) {
-    throw new Error(`Spotify API error: ${response.statusText}`);
+      // Check if it's a retryable error
+      const status = err?.status || 0;
+      const isRetryable = status === 429 || status >= 500;
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw err;
+      }
+
+      // Calculate backoff delay
+      const delay = initialDelay * Math.pow(2, attempt);
+      const jitter = Math.random() * 200; // Add jitter
+      const totalDelay = delay + jitter;
+
+      console.log(`Retrying after ${Math.round(totalDelay)}ms (attempt ${attempt + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
+    }
   }
 
-  return response.json();
+  throw lastError;
 }
 
-// Fetch user profile
+// Make authenticated API request with retry logic
+async function fetchFromSpotify<T>(endpoint: string): Promise<T> {
+  return retryWithBackoff(async () => {
+    const accessToken = await getAccessToken();
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error: any = new Error(`Spotify API error: ${response.statusText}`);
+      error.status = response.status;
+      throw error;
+    }
+
+    return response.json();
+  });
+}
+
+/**
+ * Initialize storage - migrate from localStorage to IndexedDB if needed
+ */
+let migrationChecked = false;
+async function ensureMigration() {
+  if (migrationChecked) return;
+  migrationChecked = true;
+
+  // Check if migration needed
+  const hasOldCache = localStorage.getItem('cached_library') || localStorage.getItem('cached_playlists');
+  if (hasOldCache) {
+    try {
+      await migrateFromLocalStorage();
+      console.log('✓ Migration complete!');
+    } catch (err) {
+      console.error('Migration failed:', err);
+    }
+  }
+
+  // Clean up expired artist cache periodically
+  await cleanupArtistCache();
+}
+
+// Fetch user profile (keep in localStorage - small data)
 export async function fetchUserProfile(): Promise<UserProfile> {
   const cached = localStorage.getItem('user_profile');
   if (cached) {
@@ -106,22 +174,24 @@ export async function fetchUserProfile(): Promise<UserProfile> {
   return profile;
 }
 
-// Fetch all saved tracks from library
+// Fetch all saved tracks from library (using IndexedDB)
 export async function fetchLibraryTracks(
   onProgress?: (current: number, total: number, newTracks: SpotifyTrack[]) => void,
-  forceRefresh: boolean = false
+  forceRefresh: boolean = false,
+  showToastOnError?: (message: string, type: 'error' | 'warning') => void
 ): Promise<SpotifyTrack[]> {
+  await ensureMigration();
+
   // Return cached data if available and not forcing refresh
   if (!forceRefresh) {
-    const cached = localStorage.getItem('cached_library');
-    if (cached) {
-      try {
-        const cachedData: CachedLibrary = JSON.parse(cached);
+    try {
+      const cachedData = await idbGet<CachedLibrary>('LIBRARY', 'main');
 
+      if (cachedData) {
         // Check cache version - invalidate if old
         if (cachedData.version !== CACHE_VERSION) {
           console.log('Cache version mismatch, invalidating old cache');
-          localStorage.removeItem('cached_library');
+          await idbDelete('LIBRARY', 'main');
         } else {
           const tracks = cachedData.tracks.map(fromMinimalTrack);
           // Call progress callback with all cached tracks at once
@@ -130,10 +200,9 @@ export async function fetchLibraryTracks(
           }
           return tracks;
         }
-      } catch (err) {
-        console.error('Failed to parse cached library, will refetch:', err);
-        localStorage.removeItem('cached_library');
       }
+    } catch (err) {
+      console.error('Failed to load cached library, will refetch:', err);
     }
   }
 
@@ -161,7 +230,7 @@ export async function fetchLibraryTracks(
     offset += limit;
   }
 
-  // Cache the results with minimal data
+  // Cache the results with minimal data in IndexedDB
   try {
     const cacheData: CachedLibrary = {
       version: CACHE_VERSION,
@@ -169,47 +238,43 @@ export async function fetchLibraryTracks(
       timestamp: Date.now(),
       lastSynced: Date.now(),
     };
-    localStorage.setItem('cached_library', JSON.stringify(cacheData));
+    await idbSet('LIBRARY', 'main', cacheData);
   } catch (err) {
-    console.warn('Failed to cache library (quota exceeded):', err);
-    // Continue without caching
+    console.warn('Failed to cache library:', err);
+    if (showToastOnError) {
+      showToastOnError('Unable to cache library. You may need to clear browser data.', 'warning');
+    }
   }
 
   return tracks;
 }
 
 // Get last sync time for library
-export function getLibraryLastSync(): number | null {
-  const cached = localStorage.getItem('cached_library');
-  if (cached) {
-    try {
-      const cachedData: CachedLibrary = JSON.parse(cached);
-      // Check cache version - return null if old
-      if (cachedData.version !== CACHE_VERSION) {
-        return null;
-      }
+export async function getLibraryLastSync(): Promise<number | null> {
+  try {
+    const cachedData = await idbGet<CachedLibrary>('LIBRARY', 'main');
+    if (cachedData && cachedData.version === CACHE_VERSION) {
       return cachedData.lastSynced || cachedData.timestamp;
-    } catch (err) {
-      return null;
     }
+    return null;
+  } catch (err) {
+    return null;
   }
-  return null;
 }
 
 // Resync library with smart merge
 export async function resyncLibrary(
   onProgress?: (current: number, total: number, newTracks: SpotifyTrack[]) => void
 ): Promise<{ added: SpotifyTrack[]; removed: string[]; tracks: SpotifyTrack[] }> {
-  const cached = localStorage.getItem('cached_library');
   const existingTrackIds = new Set<string>();
 
-  if (cached) {
-    try {
-      const cachedData: CachedLibrary = JSON.parse(cached);
+  try {
+    const cachedData = await idbGet<CachedLibrary>('LIBRARY', 'main');
+    if (cachedData) {
       cachedData.tracks.forEach(t => existingTrackIds.add(t.id));
-    } catch (err) {
-      console.error('Failed to parse cached library:', err);
     }
+  } catch (err) {
+    console.error('Failed to load cached library:', err);
   }
 
   // Fetch fresh data
@@ -225,30 +290,32 @@ export async function resyncLibrary(
 
 // Fetch user's playlists
 export async function fetchUserPlaylists(forceRefresh: boolean = false): Promise<SpotifyPlaylist[]> {
+  await ensureMigration();
+
   // Check cache first - auto-sync every 24 hours
-  const cached = localStorage.getItem('cached_playlists');
-  if (!forceRefresh && cached) {
+  if (!forceRefresh) {
     try {
-      const cachedData: CachedPlaylists = JSON.parse(cached);
+      const cachedData = await idbGet<CachedPlaylists>('PLAYLISTS', 'main');
 
-      // Check cache version - invalidate if old
-      if (cachedData.version !== CACHE_VERSION) {
-        console.log('Playlists cache version mismatch, invalidating old cache');
-        localStorage.removeItem('cached_playlists');
-      } else {
-        const lastSynced = cachedData.lastSynced || cachedData.timestamp;
+      if (cachedData) {
+        // Check cache version - invalidate if old
+        if (cachedData.version !== CACHE_VERSION) {
+          console.log('Playlists cache version mismatch, invalidating old cache');
+          await idbDelete('PLAYLISTS', 'main');
+        } else {
+          const lastSynced = cachedData.lastSynced || cachedData.timestamp;
 
-        // Auto-sync if older than 24 hours
-        if (Date.now() - lastSynced < 24 * 60 * 60 * 1000) {
-          return cachedData.playlists;
+          // Auto-sync if older than 24 hours
+          if (Date.now() - lastSynced < 24 * 60 * 60 * 1000) {
+            return cachedData.playlists;
+          }
+
+          // If older than 24 hours, fall through to refresh
+          console.log('Playlists cache older than 24 hours, auto-syncing...');
         }
-
-        // If older than 24 hours, fall through to refresh
-        console.log('Playlists cache older than 24 hours, auto-syncing...');
       }
     } catch (err) {
-      console.error('Failed to parse cached playlists, will refetch:', err);
-      localStorage.removeItem('cached_playlists');
+      console.error('Failed to load cached playlists, will refetch:', err);
     }
   }
 
@@ -279,30 +346,25 @@ export async function fetchUserPlaylists(forceRefresh: boolean = false): Promise
       timestamp: Date.now(),
       lastSynced: Date.now(),
     };
-    localStorage.setItem('cached_playlists', JSON.stringify(cacheData));
+    await idbSet('PLAYLISTS', 'main', cacheData);
   } catch (err) {
-    console.warn('Failed to cache playlists (quota exceeded):', err);
+    console.warn('Failed to cache playlists:', err);
   }
 
   return playlists;
 }
 
 // Get last sync time for playlists
-export function getPlaylistsLastSync(): number | null {
-  const cached = localStorage.getItem('cached_playlists');
-  if (cached) {
-    try {
-      const cachedData: CachedPlaylists = JSON.parse(cached);
-      // Check cache version - return null if old
-      if (cachedData.version !== CACHE_VERSION) {
-        return null;
-      }
+export async function getPlaylistsLastSync(): Promise<number | null> {
+  try {
+    const cachedData = await idbGet<CachedPlaylists>('PLAYLISTS', 'main');
+    if (cachedData && cachedData.version === CACHE_VERSION) {
       return cachedData.lastSynced || cachedData.timestamp;
-    } catch (err) {
-      return null;
     }
+    return null;
+  } catch (err) {
+    return null;
   }
-  return null;
 }
 
 // Resync playlists
@@ -316,19 +378,18 @@ export async function fetchPlaylistTracks(
   onProgress?: (current: number, total: number, newTracks: SpotifyTrack[]) => void,
   forceRefresh: boolean = false
 ): Promise<SpotifyTrack[]> {
+  await ensureMigration();
+
   // Check cache
-  const cacheKey = `cached_playlist_${playlistId}`;
-
   if (!forceRefresh) {
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const cachedData: CachedPlaylist = JSON.parse(cached);
+    try {
+      const cachedData = await idbGet<CachedPlaylist>('PLAYLIST_TRACKS', playlistId);
 
+      if (cachedData) {
         // Check cache version - invalidate if old
         if (cachedData.version !== CACHE_VERSION) {
           console.log(`Playlist cache version mismatch for ${playlistId}, invalidating old cache`);
-          localStorage.removeItem(cacheKey);
+          await idbDelete('PLAYLIST_TRACKS', playlistId);
         } else {
           const tracks = cachedData.tracks.map(fromMinimalTrack);
           if (onProgress) {
@@ -336,10 +397,9 @@ export async function fetchPlaylistTracks(
           }
           return tracks;
         }
-      } catch (err) {
-        console.error('Failed to parse cached playlist, will refetch:', err);
-        localStorage.removeItem(cacheKey);
       }
+    } catch (err) {
+      console.error('Failed to load cached playlist, will refetch:', err);
     }
   }
 
@@ -380,32 +440,25 @@ export async function fetchPlaylistTracks(
       timestamp: Date.now(),
       lastSynced: Date.now(),
     };
-    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    await idbSet('PLAYLIST_TRACKS', playlistId, cacheData);
   } catch (err) {
-    console.warn('Failed to cache playlist (quota exceeded):', err);
-    // Continue without caching
+    console.warn('Failed to cache playlist:', err);
   }
 
   return tracks;
 }
 
 // Get last sync time for a playlist
-export function getPlaylistLastSync(playlistId: string): number | null {
-  const cacheKey = `cached_playlist_${playlistId}`;
-  const cached = localStorage.getItem(cacheKey);
-  if (cached) {
-    try {
-      const cachedData: CachedPlaylist = JSON.parse(cached);
-      // Check cache version - return null if old
-      if (cachedData.version !== CACHE_VERSION) {
-        return null;
-      }
+export async function getPlaylistLastSync(playlistId: string): Promise<number | null> {
+  try {
+    const cachedData = await idbGet<CachedPlaylist>('PLAYLIST_TRACKS', playlistId);
+    if (cachedData && cachedData.version === CACHE_VERSION) {
       return cachedData.lastSynced || cachedData.timestamp;
-    } catch (err) {
-      return null;
     }
+    return null;
+  } catch (err) {
+    return null;
   }
-  return null;
 }
 
 // Resync playlist with smart merge
@@ -413,17 +466,15 @@ export async function resyncPlaylistTracks(
   playlistId: string,
   onProgress?: (current: number, total: number, newTracks: SpotifyTrack[]) => void
 ): Promise<{ added: SpotifyTrack[]; removed: string[]; tracks: SpotifyTrack[] }> {
-  const cacheKey = `cached_playlist_${playlistId}`;
-  const cached = localStorage.getItem(cacheKey);
   const existingTrackIds = new Set<string>();
 
-  if (cached) {
-    try {
-      const cachedData: CachedPlaylist = JSON.parse(cached);
+  try {
+    const cachedData = await idbGet<CachedPlaylist>('PLAYLIST_TRACKS', playlistId);
+    if (cachedData) {
       cachedData.tracks.forEach(t => existingTrackIds.add(t.id));
-    } catch (err) {
-      console.error('Failed to parse cached playlist:', err);
     }
+  } catch (err) {
+    console.error('Failed to load cached playlist:', err);
   }
 
   // Fetch fresh data
@@ -437,9 +488,93 @@ export async function resyncPlaylistTracks(
   return { added, removed, tracks: freshTracks };
 }
 
-// Fetch artist details (for monthly listeners)
+/**
+ * Get artist follower count (with caching)
+ */
+export async function getArtistFollowers(artistId: string): Promise<number> {
+  // Check cache first
+  const cacheKey = `artist_${artistId}`;
+  const cached = await idbGet<{ followers: number; expires_at: number }>('ARTIST_FOLLOWERS', cacheKey);
+
+  if (cached && cached.expires_at > Date.now()) {
+    return cached.followers;
+  }
+
+  // Fetch from API
+  const artist = await fetchFromSpotify<{ id: string; name: string; followers: { total: number } }>(`/artists/${artistId}`);
+  const followers = artist.followers.total;
+
+  // Cache the result
+  try {
+    await idbSet('ARTIST_FOLLOWERS', cacheKey, {
+      followers,
+      expires_at: Date.now() + ARTIST_CACHE_TTL,
+    });
+  } catch (err) {
+    console.warn('Failed to cache artist data:', err);
+  }
+
+  return followers;
+}
+
+/**
+ * Batch fetch artist followers with parallelization (10 concurrent)
+ * Returns Map of artistId -> follower count
+ */
+export async function batchFetchArtistFollowers(
+  artistIds: string[],
+  onProgress?: (current: number, total: number) => void
+): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  const batchSize = 10;
+  let completed = 0;
+
+  // Process in batches
+  for (let i = 0; i < artistIds.length; i += batchSize) {
+    const batch = artistIds.slice(i, i + batchSize);
+
+    // Fetch batch in parallel
+    const batchResults = await Promise.all(
+      batch.map(async (artistId) => {
+        try {
+          const followers = await getArtistFollowers(artistId);
+          return { artistId, followers };
+        } catch (err) {
+          console.error(`Failed to fetch artist ${artistId}:`, err);
+          return { artistId, followers: -1 }; // Use -1 to indicate error
+        }
+      })
+    );
+
+    // Add results to map
+    batchResults.forEach(({ artistId, followers }) => {
+      if (followers >= 0) {
+        results.set(artistId, followers);
+      }
+    });
+
+    completed += batch.length;
+    if (onProgress) {
+      onProgress(completed, artistIds.length);
+    }
+  }
+
+  return results;
+}
+
+// Fetch artist details (for monthly listeners) - legacy function, prefer getArtistFollowers
 export async function fetchArtist(artistId: string): Promise<{ id: string; name: string; followers: { total: number } }> {
   return await fetchFromSpotify(`/artists/${artistId}`);
+}
+
+/**
+ * Clean up expired artist follower cache (call periodically)
+ */
+export async function cleanupArtistCache(): Promise<void> {
+  const deleted = await idbCleanupExpiredArtists();
+  if (deleted > 0) {
+    console.log(`Cleaned up ${deleted} expired artist cache entries`);
+  }
 }
 
 // Play a track on the user's active device

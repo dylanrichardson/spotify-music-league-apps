@@ -5,28 +5,31 @@ import { AuthCallback } from './components/AuthCallback';
 import { Round1App } from './rounds/round-1/Round1App';
 import { Round2App } from './rounds/round-2/Round2App';
 import { Round5App } from './rounds/round-5/Round5App';
+import { ToastProvider } from './shared/toast';
 
 function App() {
   return (
-    <BrowserRouter basename="/spotify-music-league-apps">
-      <Routes>
-        <Route path="/" element={<Home />} />
+    <ToastProvider>
+      <BrowserRouter basename="/spotify-music-league-apps">
+        <Routes>
+          <Route path="/" element={<Home />} />
 
-        {/* Unified OAuth callback */}
-        <Route path="/callback" element={<AuthCallback />} />
+          {/* Unified OAuth callback */}
+          <Route path="/callback" element={<AuthCallback />} />
 
-        {/* Round routes */}
-        <Route path="/round-1/*" element={<Round1App />} />
-        <Route path="/round-2/*" element={<Round2App />} />
-        <Route path="/round-5/*" element={<Round5App />} />
+          {/* Round routes */}
+          <Route path="/round-1/*" element={<Round1App />} />
+          <Route path="/round-2/*" element={<Round2App />} />
+          <Route path="/round-5/*" element={<Round5App />} />
 
-        {/* Legacy redirect - parents-birth-year redirects to round-5 */}
-        <Route path="/parents-birth-year/*" element={<Navigate to="/round-5" replace />} />
+          {/* Legacy redirect - parents-birth-year redirects to round-5 */}
+          <Route path="/parents-birth-year/*" element={<Navigate to="/round-5" replace />} />
 
-        {/* 404 catch-all */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+          {/* 404 catch-all */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 

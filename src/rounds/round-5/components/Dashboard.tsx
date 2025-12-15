@@ -69,9 +69,11 @@ export function Dashboard() {
     };
   }, []);
 
-  const updateLastSyncTimes = () => {
-    setLibraryLastSync(getLibraryLastSync());
-    setPlaylistsLastSync(getPlaylistsLastSync());
+  const updateLastSyncTimes = async () => {
+    const libSync = await getLibraryLastSync();
+    const playlistSync = await getPlaylistsLastSync();
+    setLibraryLastSync(libSync);
+    setPlaylistsLastSync(playlistSync);
   };
 
   const initializePlayer = async () => {
