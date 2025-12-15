@@ -316,7 +316,7 @@ export function Dashboard() {
                 />
               )}
               <div className="min-w-0">
-                <h1 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-800 break-words">
                   Round 2: Hidden Gems
                 </h1>
                 <p className="text-sm md:text-base text-gray-600 truncate">Welcome, {profile?.display_name || 'User'}!</p>

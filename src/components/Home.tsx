@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { ROUNDS } from '../rounds/config';
+import { getStoredTokens, logout } from '../shared/spotify-auth';
+import { fetchUserProfile } from '../shared/spotify-api';
+import type { UserProfile } from '../rounds/types';
 
 const ROUND_EMOJIS: Record<number, string> = {
   1: '⏱️',
@@ -26,11 +30,53 @@ const ROUND_HOVER_COLORS: Record<number, string> = {
 };
 
 export function Home() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const tokens = getStoredTokens();
+    setIsLoggedIn(!!tokens);
+
+    if (tokens) {
+      fetchUserProfile()
+        .then(profile => setUserProfile(profile))
+        .catch(err => console.error('Failed to fetch user profile:', err));
+    }
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    setIsLoggedIn(false);
+    setUserProfile(null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-12">
           <div className="text-center mb-6 md:mb-8">
+            {isLoggedIn && userProfile && (
+              <div className="flex justify-end items-center gap-3 mb-3 md:mb-4">
+                <div className="flex items-center gap-2 bg-gray-50 rounded-full py-2 px-3 md:px-4">
+                  {userProfile.images[0] && (
+                    <img
+                      src={userProfile.images[0].url}
+                      alt={userProfile.display_name}
+                      className="w-6 h-6 md:w-8 md:h-8 rounded-full"
+                    />
+                  )}
+                  <span className="text-xs md:text-sm font-medium text-gray-700">
+                    {userProfile.display_name}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 md:px-6 rounded-full transition-colors duration-200 text-xs md:text-sm"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
             <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-3 md:mb-4">
               Joe's Garageband Explorer
             </h1>

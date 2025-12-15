@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './components/Home';
 import { NotFound } from './components/NotFound';
+import { AuthCallback } from './components/AuthCallback';
 import { Round1App } from './rounds/round-1/Round1App';
 import { Round2App } from './rounds/round-2/Round2App';
 import { Round5App } from './rounds/round-5/Round5App';
@@ -10,6 +11,9 @@ function App() {
     <BrowserRouter basename="/spotify-music-league-apps">
       <Routes>
         <Route path="/" element={<Home />} />
+
+        {/* Unified OAuth callback */}
+        <Route path="/callback" element={<AuthCallback />} />
 
         {/* Round routes */}
         <Route path="/round-1/*" element={<Round1App />} />

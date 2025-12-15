@@ -40,6 +40,7 @@ export interface CachedTrack {
   id: string;
   name: string;
   artists: string;
+  artistIds: string; // Comma-separated artist IDs
   albumName: string;
   releaseDate: string;
   imageUrl: string;
@@ -48,12 +49,14 @@ export interface CachedTrack {
 }
 
 export interface CachedLibrary {
+  version?: number;
   tracks: CachedTrack[];
   timestamp: number;
   lastSynced: number;
 }
 
 export interface CachedPlaylist {
+  version?: number;
   playlistId: string;
   tracks: CachedTrack[];
   timestamp: number;
@@ -61,6 +64,7 @@ export interface CachedPlaylist {
 }
 
 export interface CachedPlaylists {
+  version?: number;
   playlists: SpotifyPlaylist[];
   timestamp: number;
   lastSynced: number;

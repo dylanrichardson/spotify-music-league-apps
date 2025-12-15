@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Login } from './components/Login';
-import { Callback } from './components/Callback';
 import { Dashboard } from './components/Dashboard';
 import { getStoredTokens } from '../../shared/spotify-auth';
 
@@ -16,12 +15,6 @@ export function Round5App() {
     setIsAuthenticated(!!tokens);
     setIsLoading(false);
   }, []);
-
-  // Handle OAuth callback - check for code or error query params
-  const searchParams = new URLSearchParams(window.location.search);
-  if (searchParams.has('code') || searchParams.has('error')) {
-    return <Callback />;
-  }
 
   if (isLoading) {
     return (

@@ -1,12 +1,16 @@
 import type { SpotifyTrack, SpotifyPlaylist, UserProfile, CachedLibrary, CachedTrack, CachedPlaylist, CachedPlaylists } from '../rounds/types';
 import { getStoredTokens, refreshAccessToken } from './spotify-auth';
 
+// Cache version - increment this when making breaking changes to cache structure
+const CACHE_VERSION = 2;
+
 // Convert SpotifyTrack to minimal CachedTrack
 function toMinimalTrack(track: SpotifyTrack): CachedTrack {
   return {
     id: track.id,
     name: track.name,
     artists: track.artists.map(a => a.name).join(', '),
+    artistIds: track.artists.map(a => a.id || '').join(', '),
     albumName: track.album.name,
     releaseDate: track.album.release_date,
     imageUrl: track.album.images[0]?.url || '',
@@ -17,10 +21,16 @@ function toMinimalTrack(track: SpotifyTrack): CachedTrack {
 
 // Convert CachedTrack back to SpotifyTrack
 function fromMinimalTrack(cached: CachedTrack): SpotifyTrack {
+  const artistNames = cached.artists.split(', ');
+  const artistIds = cached.artistIds ? cached.artistIds.split(', ') : [];
+
   return {
     id: cached.id,
     name: cached.name,
-    artists: cached.artists.split(', ').map(name => ({ name })),
+    artists: artistNames.map((name, index) => ({
+      name,
+      id: artistIds[index] || undefined,
+    })),
     album: {
       name: cached.albumName,
       release_date: cached.releaseDate,
@@ -107,12 +117,19 @@ export async function fetchLibraryTracks(
     if (cached) {
       try {
         const cachedData: CachedLibrary = JSON.parse(cached);
-        const tracks = cachedData.tracks.map(fromMinimalTrack);
-        // Call progress callback with all cached tracks at once
-        if (onProgress) {
-          onProgress(tracks.length, tracks.length, tracks);
+
+        // Check cache version - invalidate if old
+        if (cachedData.version !== CACHE_VERSION) {
+          console.log('Cache version mismatch, invalidating old cache');
+          localStorage.removeItem('cached_library');
+        } else {
+          const tracks = cachedData.tracks.map(fromMinimalTrack);
+          // Call progress callback with all cached tracks at once
+          if (onProgress) {
+            onProgress(tracks.length, tracks.length, tracks);
+          }
+          return tracks;
         }
-        return tracks;
       } catch (err) {
         console.error('Failed to parse cached library, will refetch:', err);
         localStorage.removeItem('cached_library');
@@ -147,6 +164,7 @@ export async function fetchLibraryTracks(
   // Cache the results with minimal data
   try {
     const cacheData: CachedLibrary = {
+      version: CACHE_VERSION,
       tracks: tracks.map(toMinimalTrack),
       timestamp: Date.now(),
       lastSynced: Date.now(),
@@ -166,6 +184,10 @@ export function getLibraryLastSync(): number | null {
   if (cached) {
     try {
       const cachedData: CachedLibrary = JSON.parse(cached);
+      // Check cache version - return null if old
+      if (cachedData.version !== CACHE_VERSION) {
+        return null;
+      }
       return cachedData.lastSynced || cachedData.timestamp;
     } catch (err) {
       return null;
@@ -208,15 +230,22 @@ export async function fetchUserPlaylists(forceRefresh: boolean = false): Promise
   if (!forceRefresh && cached) {
     try {
       const cachedData: CachedPlaylists = JSON.parse(cached);
-      const lastSynced = cachedData.lastSynced || cachedData.timestamp;
 
-      // Auto-sync if older than 24 hours
-      if (Date.now() - lastSynced < 24 * 60 * 60 * 1000) {
-        return cachedData.playlists;
+      // Check cache version - invalidate if old
+      if (cachedData.version !== CACHE_VERSION) {
+        console.log('Playlists cache version mismatch, invalidating old cache');
+        localStorage.removeItem('cached_playlists');
+      } else {
+        const lastSynced = cachedData.lastSynced || cachedData.timestamp;
+
+        // Auto-sync if older than 24 hours
+        if (Date.now() - lastSynced < 24 * 60 * 60 * 1000) {
+          return cachedData.playlists;
+        }
+
+        // If older than 24 hours, fall through to refresh
+        console.log('Playlists cache older than 24 hours, auto-syncing...');
       }
-
-      // If older than 24 hours, fall through to refresh
-      console.log('Playlists cache older than 24 hours, auto-syncing...');
     } catch (err) {
       console.error('Failed to parse cached playlists, will refetch:', err);
       localStorage.removeItem('cached_playlists');
@@ -245,6 +274,7 @@ export async function fetchUserPlaylists(forceRefresh: boolean = false): Promise
   // Cache the playlists
   try {
     const cacheData: CachedPlaylists = {
+      version: CACHE_VERSION,
       playlists,
       timestamp: Date.now(),
       lastSynced: Date.now(),
@@ -263,6 +293,10 @@ export function getPlaylistsLastSync(): number | null {
   if (cached) {
     try {
       const cachedData: CachedPlaylists = JSON.parse(cached);
+      // Check cache version - return null if old
+      if (cachedData.version !== CACHE_VERSION) {
+        return null;
+      }
       return cachedData.lastSynced || cachedData.timestamp;
     } catch (err) {
       return null;
@@ -290,11 +324,18 @@ export async function fetchPlaylistTracks(
     if (cached) {
       try {
         const cachedData: CachedPlaylist = JSON.parse(cached);
-        const tracks = cachedData.tracks.map(fromMinimalTrack);
-        if (onProgress) {
-          onProgress(tracks.length, tracks.length, tracks);
+
+        // Check cache version - invalidate if old
+        if (cachedData.version !== CACHE_VERSION) {
+          console.log(`Playlist cache version mismatch for ${playlistId}, invalidating old cache`);
+          localStorage.removeItem(cacheKey);
+        } else {
+          const tracks = cachedData.tracks.map(fromMinimalTrack);
+          if (onProgress) {
+            onProgress(tracks.length, tracks.length, tracks);
+          }
+          return tracks;
         }
-        return tracks;
       } catch (err) {
         console.error('Failed to parse cached playlist, will refetch:', err);
         localStorage.removeItem(cacheKey);
@@ -333,6 +374,7 @@ export async function fetchPlaylistTracks(
   // Cache the playlist
   try {
     const cacheData: CachedPlaylist = {
+      version: CACHE_VERSION,
       playlistId,
       tracks: tracks.map(toMinimalTrack),
       timestamp: Date.now(),
@@ -354,6 +396,10 @@ export function getPlaylistLastSync(playlistId: string): number | null {
   if (cached) {
     try {
       const cachedData: CachedPlaylist = JSON.parse(cached);
+      // Check cache version - return null if old
+      if (cachedData.version !== CACHE_VERSION) {
+        return null;
+      }
       return cachedData.lastSynced || cachedData.timestamp;
     } catch (err) {
       return null;

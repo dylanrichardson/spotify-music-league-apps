@@ -12,10 +12,11 @@ const SCOPES = [
   'streaming',
 ];
 
-// Get redirect URI for a specific round
-function getRedirectURI(roundPath: string): string {
+// Get unified redirect URI for OAuth callback
+function getRedirectURI(): string {
   const basePath = '/spotify-music-league-apps';
-  const fullPath = `${basePath}${roundPath}`;
+  const callbackPath = '/callback';
+  const fullPath = `${basePath}${callbackPath}`;
 
   const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
   return isLocalhost
@@ -55,7 +56,7 @@ export async function redirectToSpotifyAuth(roundPath: string): Promise<void> {
   localStorage.setItem('code_verifier', codeVerifier);
   localStorage.setItem('auth_return_path', roundPath);
 
-  const redirectURI = getRedirectURI(roundPath);
+  const redirectURI = getRedirectURI();
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -70,14 +71,14 @@ export async function redirectToSpotifyAuth(roundPath: string): Promise<void> {
 }
 
 // Exchange authorization code for tokens
-export async function exchangeCodeForToken(code: string, roundPath: string): Promise<AuthTokens> {
+export async function exchangeCodeForToken(code: string, _callbackPath: string): Promise<AuthTokens> {
   const codeVerifier = localStorage.getItem('code_verifier');
 
   if (!codeVerifier) {
     throw new Error('Code verifier not found');
   }
 
-  const redirectURI = getRedirectURI(roundPath);
+  const redirectURI = getRedirectURI();
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -110,7 +111,7 @@ export async function exchangeCodeForToken(code: string, roundPath: string): Pro
   // Store tokens (shared across all rounds)
   localStorage.setItem('spotify_tokens', JSON.stringify(tokens));
   localStorage.removeItem('code_verifier');
-  localStorage.removeItem('auth_return_path');
+  // Note: auth_return_path is removed by AuthCallback after navigation
 
   return tokens;
 }
