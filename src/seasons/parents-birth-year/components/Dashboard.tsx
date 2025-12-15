@@ -831,15 +831,25 @@ export function Dashboard() {
                 {getSortedTracks(filteredTracks).map((track) => (
                   <div
                     key={track.id}
-                    className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors"
+                    onClick={() => handlePlayTrack(track)}
+                    className="bg-gray-50 rounded-lg p-4 hover:bg-gray-100 transition-colors cursor-pointer"
                   >
                     <div className="flex gap-3">
                       {track.album.images[0] && (
-                        <img
-                          src={track.album.images[0].url}
-                          alt={track.album.name}
-                          className="w-16 h-16 rounded"
-                        />
+                        <div className="relative flex-shrink-0">
+                          <img
+                            src={track.album.images[0].url}
+                            alt={track.album.name}
+                            className="w-16 h-16 rounded"
+                          />
+                          {playingTrackId === track.id && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded">
+                              <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-800 truncate">
@@ -855,6 +865,7 @@ export function Dashboard() {
                           href={`https://open.spotify.com/track/${track.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           className="text-xs text-green-600 hover:text-green-700 font-semibold"
                         >
                           Open in Spotify
