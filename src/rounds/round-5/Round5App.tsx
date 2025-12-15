@@ -9,7 +9,7 @@ export function Round5App() {
 
   useEffect(() => {
     // Set page title
-    document.title = "Parents' Birth Year - Music League Helper";
+    document.title = "Round 5: Songs released in your parents birth year - Music League Helper";
 
     const tokens = getStoredTokens();
     setIsAuthenticated(!!tokens);

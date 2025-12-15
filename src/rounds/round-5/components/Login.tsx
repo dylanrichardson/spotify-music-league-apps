@@ -18,12 +18,9 @@ export function Login() {
         </Link>
         <div className="bg-white rounded-lg shadow-2xl p-6 md:p-8">
           <div className="text-center">
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-3 md:mb-4">
-              Round 5: Parents' Birth Year Finder
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-800 mb-6 md:mb-8">
+              Round 5: Songs released in your parents birth year
             </h1>
-            <p className="text-sm md:text-base text-gray-600 mb-6 md:mb-8">
-              Find songs from your mom and dad's birth years
-            </p>
             <button
               onClick={handleLogin}
               className="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 md:px-8 rounded-full transition-colors duration-200 shadow-lg hover:shadow-xl text-sm md:text-base"

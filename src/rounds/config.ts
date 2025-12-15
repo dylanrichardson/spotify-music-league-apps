@@ -39,7 +39,6 @@ export const ROUNDS: RoundConfig[] = [
     subtitle: null,
     path: '/round-5',
     enabled: true,
-    description: 'Find tracks from specific birth years',
   },
 ];
 

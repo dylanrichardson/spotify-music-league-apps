@@ -34,6 +34,9 @@ export function Home() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
+    // Set page title
+    document.title = "Joe's Garageband Explorer";
+
     const tokens = getStoredTokens();
     setIsLoggedIn(!!tokens);
 
