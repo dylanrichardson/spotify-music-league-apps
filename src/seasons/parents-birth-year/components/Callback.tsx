@@ -22,8 +22,8 @@ export function Callback() {
 
       try {
         await exchangeCodeForToken(code);
-        // Redirect to home page
-        window.location.href = '/';
+        // Redirect to the dashboard
+        window.location.href = '/spotify-music-league-apps/parents-birth-year';
       } catch (err) {
         setError(`Failed to complete authorization: ${err}`);
       }
@@ -40,7 +40,7 @@ export function Callback() {
             <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
             <p className="text-gray-700">{error}</p>
             <button
-              onClick={() => (window.location.href = '/')}
+              onClick={() => (window.location.href = '/spotify-music-league-apps/parents-birth-year')}
               className="mt-6 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-full"
             >
               Go Back
