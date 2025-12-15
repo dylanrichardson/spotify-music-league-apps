@@ -274,7 +274,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
-      <div className={`container mx-auto px-4 py-4 md:py-8 ${playbackMode === 'sdk' && playerState?.track_window?.current_track ? 'pb-24' : ''}`}>
+      <div className={`container mx-auto px-4 py-4 md:py-8 ${playbackMode === 'sdk' && playerState?.track_window?.current_track ? 'pb-24 md:pb-32' : ''}`}>
         {/* Header */}
         <div className="bg-white rounded-lg shadow-xl p-4 md:p-6 mb-4 md:mb-8 max-w-4xl mx-auto">
           {/* Top bar: Profile + Navigation */}
