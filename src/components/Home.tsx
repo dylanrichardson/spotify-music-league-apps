@@ -39,8 +39,8 @@ export function Home() {
             </p>
           </div>
 
-          <div className="space-y-4">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Rounds</h2>
+          <div className="space-y-6">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 md:mb-8">Rounds</h2>
 
             {ROUNDS.map((round) => {
               const emoji = ROUND_EMOJIS[round.number] || '🎵';
