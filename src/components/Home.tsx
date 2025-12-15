@@ -1,4 +1,29 @@
 import { Link } from 'react-router-dom';
+import { ROUNDS } from '../rounds/config';
+
+const ROUND_EMOJIS: Record<number, string> = {
+  1: '⏱️',
+  2: '💎',
+  3: '🎺',
+  4: '🏎️',
+  5: '👨‍👩‍👦',
+};
+
+const ROUND_GRADIENTS: Record<number, string> = {
+  1: 'from-purple-50 to-pink-50',
+  2: 'from-blue-50 to-cyan-50',
+  3: 'from-yellow-50 to-orange-50',
+  4: 'from-red-50 to-pink-50',
+  5: 'from-green-50 to-blue-50',
+};
+
+const ROUND_HOVER_COLORS: Record<number, string> = {
+  1: 'hover:border-purple-500 group-hover:text-purple-600',
+  2: 'hover:border-blue-500 group-hover:text-blue-600',
+  3: 'hover:border-yellow-500 group-hover:text-yellow-600',
+  4: 'hover:border-red-500 group-hover:text-red-600',
+  5: 'hover:border-green-500 group-hover:text-green-600',
+};
 
 export function Home() {
   return (
@@ -10,50 +35,87 @@ export function Home() {
               🎵 Music League Helper
             </h1>
             <p className="text-base md:text-xl text-gray-600">
-              Tools to help you find the perfect song for each Music League season
+              Tools to help you find the perfect song for each Music League round
             </p>
           </div>
 
           <div className="space-y-4">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Available Seasons</h2>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6">Rounds</h2>
 
-            {/* Season 1: Parents' Birth Year */}
-            <Link to="/parents-birth-year">
-              <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-gray-200 hover:border-green-500 rounded-xl p-4 md:p-6 transition-all hover:shadow-lg cursor-pointer group">
-                <div className="flex items-center gap-3 md:gap-4">
-                  <div className="text-4xl md:text-5xl flex-shrink-0">👨‍👩‍👦</div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg md:text-2xl font-bold text-gray-900 group-hover:text-green-600 transition-colors">
-                      Parents' Birth Year
-                    </h3>
-                    <p className="text-sm md:text-base text-gray-600 mt-1">
-                      Find songs from your mom and dad's birth years in your Spotify library
-                    </p>
-                  </div>
-                  <div className="text-xl md:text-2xl text-gray-400 group-hover:text-green-500 transition-colors flex-shrink-0">
-                    →
-                  </div>
-                </div>
-              </div>
-            </Link>
+            {ROUNDS.map((round) => {
+              const emoji = ROUND_EMOJIS[round.number] || '🎵';
+              const gradient = ROUND_GRADIENTS[round.number] || 'from-gray-50 to-gray-50';
+              const hoverColor = ROUND_HOVER_COLORS[round.number] || 'hover:border-gray-500 group-hover:text-gray-600';
 
-            {/* Future seasons placeholder */}
-            <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 md:p-6 opacity-50">
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="text-4xl md:text-5xl flex-shrink-0">🔜</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg md:text-2xl font-bold text-gray-500">More Seasons Coming Soon</h3>
-                  <p className="text-sm md:text-base text-gray-500 mt-1">
-                    New tools will be added for future Music League themes
-                  </p>
-                </div>
-              </div>
-            </div>
+              if (!round.enabled) {
+                return (
+                  <div
+                    key={round.number}
+                    className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 md:p-6 opacity-50 cursor-not-allowed"
+                  >
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="text-4xl md:text-5xl flex-shrink-0">{emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="inline-block bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded">
+                            Round {round.number}
+                          </span>
+                          <span className="inline-block bg-gray-200 text-gray-600 text-xs font-semibold px-2 py-1 rounded">
+                            Coming Soon
+                          </span>
+                        </div>
+                        <h3 className="text-lg md:text-2xl font-bold text-gray-500 mt-1">
+                          {round.title}
+                        </h3>
+                        {round.subtitle && (
+                          <p className="text-sm md:text-base text-gray-400 mt-1">
+                            {round.subtitle}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link key={round.number} to={round.path}>
+                  <div className={`bg-gradient-to-r ${gradient} border-2 border-gray-200 ${hoverColor} rounded-xl p-4 md:p-6 transition-all hover:shadow-lg cursor-pointer group`}>
+                    <div className="flex items-center gap-3 md:gap-4">
+                      <div className="text-4xl md:text-5xl flex-shrink-0">{emoji}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="inline-block bg-white text-gray-700 text-xs font-bold px-2 py-1 rounded shadow-sm">
+                            Round {round.number}
+                          </span>
+                        </div>
+                        <h3 className={`text-lg md:text-2xl font-bold text-gray-900 transition-colors ${hoverColor.split(' ')[1]}`}>
+                          {round.title}
+                        </h3>
+                        {round.subtitle && (
+                          <p className="text-sm md:text-base text-gray-600 mt-1">
+                            {round.subtitle}
+                          </p>
+                        )}
+                        {!round.subtitle && round.description && (
+                          <p className="text-sm md:text-base text-gray-600 mt-1">
+                            {round.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className={`text-xl md:text-2xl text-gray-400 transition-colors flex-shrink-0 ${hoverColor.split(' ')[1]}`}>
+                        →
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
 
           <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-gray-200 text-center">
             <p className="text-xs md:text-sm text-gray-500">
-              Powered by Spotify Web API • No data stored on servers
+              Powered by Spotify Web API • Data cached locally
             </p>
           </div>
         </div>
