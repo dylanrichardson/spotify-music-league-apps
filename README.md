@@ -1,27 +1,65 @@
-# Music League Helper Apps 🎵
+# Joe's Garageband Explorer 🎵
 
-A collection of web apps to help you find the perfect songs for Music League seasons. Built with React, TypeScript, and Tailwind CSS, powered by the Spotify Web API.
+A collection of web apps to help you find the perfect songs for Music League rounds. Built with React, TypeScript, and Tailwind CSS, powered by the Spotify Web API.
 
 ## What is Music League?
 
-Music League is a game where players submit songs based on weekly themes, then vote on the best submissions. These tools help you search your Spotify library to find songs that match each week's theme.
+Music League is a game where players submit songs based on weekly themes, then vote on the best submissions. These tools help you search your Spotify library to find songs that match each round's theme.
 
-## Available Seasons
+## Live App
 
-### 🎭 Parents' Birth Year
-Find songs from your mom and dad's birth years in your Spotify library or playlists.
+🌐 **[https://dylanrichardson.github.io/spotify-music-league-apps/](https://dylanrichardson.github.io/spotify-music-league-apps/)**
+
+## Available Rounds
+
+### ⏱️ Round 1: Shorties
+Find songs that are less than 2 minutes long.
+
+**Features:**
+- Configurable max duration (in seconds)
+- Filter by library or playlists
+- Real-time filtering with progress tracking
+- Sort by duration, artist, song, or album
+- List and grid views
+
+**Path:** `/round-1`
+
+### 💎 Round 2: Hidden Gems
+Find songs from artists with under 100k monthly listeners.
+
+**Features:**
+- Configurable follower threshold
+- Shows exact follower counts for each artist
+- Fetches artist data from Spotify API
+- Sort by followers, artist, song, or album
+- Discover hidden talent in your library
+
+**Path:** `/round-2`
+
+### 👨‍👩‍👦 Round 5: Parents' Birth Year Finder
+Find songs from your mom and dad's birth years.
 
 **Features:**
 - Search by both parents' birth years simultaneously
 - Filter your entire library or specific playlists
 - Searchable playlist selection
-- Real-time results with progress tracking
-- Sortable table view (by song, artist, album, or year)
-- Grid view for browsing
-- Smart caching (24hr for library, 1hr for playlists)
-- Persistent login
+- Sort by year, artist, song, or album
+- List and grid views
 
-**Path:** `/parents-birth-year`
+**Path:** `/round-5`
+
+### 🎺 Round 3 & 🏎️ Round 4
+Coming soon! (Disabled in UI)
+
+## Shared Features Across All Rounds
+
+- ✅ **Unified OAuth** - Single login works across all rounds
+- ✅ **Smart Caching** - Library cached indefinitely, auto-syncs when needed
+- ✅ **Web Playback SDK** - Play tracks directly in browser (Premium users)
+- ✅ **Spotify Connect** - Fallback playback for free tier users
+- ✅ **Responsive Design** - Works great on mobile and desktop
+- ✅ **Progress Tracking** - Real-time progress bars for large libraries
+- ✅ **Manual Resync** - Force refresh your library or playlists anytime
 
 ## Project Structure
 
@@ -29,21 +67,26 @@ Find songs from your mom and dad's birth years in your Spotify library or playli
 spotify-music-league-apps/
 ├── src/
 │   ├── components/
-│   │   └── Home.tsx                 # Landing page
-│   ├── seasons/
-│   │   └── parents-birth-year/      # Season 1
-│   │       ├── components/
-│   │       │   ├── Dashboard.tsx
-│   │       │   ├── Login.tsx
-│   │       │   └── Callback.tsx
-│   │       ├── spotify-auth.ts
-│   │       ├── spotify-api.ts
-│   │       ├── types.ts
-│   │       └── ParentsBirthYearApp.tsx
-│   ├── App.tsx                      # Main router
+│   │   ├── Home.tsx              # Landing page with all rounds
+│   │   ├── NotFound.tsx          # 404 page
+│   │   └── AuthCallback.tsx      # Unified OAuth callback handler
+│   ├── rounds/
+│   │   ├── config.ts             # Round definitions
+│   │   ├── types.ts              # Shared TypeScript types
+│   │   ├── round-1/              # Shorties round
+│   │   ├── round-2/              # Hidden gems round
+│   │   └── round-5/              # Parents' birth year round
+│   ├── shared/
+│   │   ├── spotify-auth.ts       # OAuth authentication
+│   │   ├── spotify-api.ts        # Spotify API client
+│   │   ├── player.ts             # Playback manager
+│   │   └── caching.ts            # Cache utilities
+│   ├── App.tsx                   # Main router
 │   └── main.tsx
 ├── public/
-└── dist/                            # Build output
+│   ├── 404.html                  # GitHub Pages SPA routing
+│   └── favicon.svg
+└── dist/                         # Build output (deployed to gh-pages)
 ```
 
 ## Development
@@ -57,15 +100,15 @@ spotify-music-league-apps/
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
 2. Click "Create app"
 3. Fill in the details:
-   - **App name**: Music League Helper (or any name)
+   - **App name**: Joe's Garageband Explorer (or any name)
    - **App description**: Helper tools for Music League
-   - **Redirect URIs**:
-     - Local dev: `http://127.0.0.1:8080/spotify-music-league-apps/parents-birth-year`
-     - Production: `https://YOUR_USERNAME.github.io/spotify-music-league-apps/parents-birth-year`
+   - **Redirect URIs** (uses unified callback):
+     - Local dev: `http://127.0.0.1:8080/spotify-music-league-apps/callback`
+     - Production: `https://dylanrichardson.github.io/spotify-music-league-apps/callback`
    - **APIs used**: Web API
 4. Click "Save"
 5. Copy your **Client ID**
-6. Update `src/seasons/parents-birth-year/spotify-auth.ts` with your Client ID
+6. Update `src/shared/spotify-auth.ts` with your Client ID (line 3)
 
 ### Local Development
 
@@ -118,19 +161,44 @@ This project is configured for GitHub Pages deployment:
 
 4. **Update Spotify Redirect URI:**
    - Add your GitHub Pages URL to Spotify app settings:
-   - `https://YOUR_USERNAME.github.io/spotify-music-league-apps/parents-birth-year`
+   - `https://dylanrichardson.github.io/spotify-music-league-apps/callback`
 
-Your app will be live at: `https://YOUR_USERNAME.github.io/spotify-music-league-apps/`
+Your app will be live at: `https://dylanrichardson.github.io/spotify-music-league-apps/`
 
-## Adding New Seasons
+## Adding New Rounds
 
-To add a new Music League season:
+To add a new Music League round:
 
-1. Create a new folder in `src/seasons/` (e.g., `src/seasons/song-from-movie/`)
-2. Copy the structure from `parents-birth-year/`
-3. Update the season's components and logic
-4. Add the route to `src/App.tsx`
-5. Add a link on the home page (`src/components/Home.tsx`)
+1. **Update Round Config** (`src/rounds/config.ts`):
+   ```typescript
+   {
+     number: 6,
+     title: 'Your New Round',
+     subtitle: 'Description here',
+     path: '/round-6',
+     enabled: true,
+     description: 'Longer description',
+   }
+   ```
+
+2. **Create Round Directory**: Copy structure from an existing round:
+   ```bash
+   cp -r src/rounds/round-1 src/rounds/round-6
+   ```
+
+3. **Update Components**:
+   - Modify `Dashboard.tsx` with your filtering logic
+   - Update `Login.tsx` with round-specific title
+   - Update `Round6App.tsx` naming
+
+4. **Add Route** to `src/App.tsx`:
+   ```typescript
+   <Route path="/round-6/*" element={<Round6App />} />
+   ```
+
+5. **Add Emoji** to `src/components/Home.tsx` ROUND_EMOJIS
+
+6. **No Spotify Config Change Needed** - unified OAuth handles all rounds!
 
 ## Tech Stack
 
@@ -143,11 +211,36 @@ To add a new Music League season:
 
 ## How Caching Works
 
-- **Library**: Cached for 24 hours (use `localStorage.removeItem('cached_library')` to clear)
-- **Playlists**: Cached for 1 hour per playlist
-- **Tokens**: Automatically refreshed when needed
-- **First load**: Fetches all tracks from Spotify
+The app uses a **versioned caching system** (current version: 2):
+
+- **Library**: Cached indefinitely until manual resync or version bump
+- **Playlists**: Auto-syncs after 24 hours
+- **Tokens**: Automatically refreshed when expired
+- **First load**: Fetches all tracks from Spotify with progress tracking
 - **Subsequent searches**: Instant results from cache
+- **Version Bumps**: Automatically invalidate old caches when structure changes
+
+### Cache Structure
+```typescript
+{
+  version: 2,           // Cache version
+  tracks: [...],        // Minimal track data with artist IDs
+  timestamp: Date.now(),
+  lastSynced: Date.now()
+}
+```
+
+### Manual Cache Clear
+```javascript
+// Clear library cache
+localStorage.removeItem('cached_library');
+
+// Clear playlists cache
+localStorage.removeItem('cached_playlists');
+
+// Clear specific playlist
+localStorage.removeItem('cached_playlist_PLAYLIST_ID');
+```
 
 ## Security Notes
 
@@ -179,6 +272,23 @@ To add a new Music League season:
 - GitHub Pages is configured to handle client-side routing
 - If issues persist, check that `404.html` was deployed
 
+## Architecture Highlights
+
+### Unified OAuth System
+- Single `/callback` route handles authentication for all rounds
+- Stores intended return path in localStorage
+- No need to update Spotify config when adding new rounds
+
+### Cache Versioning
+- `CACHE_VERSION` constant in `spotify-api.ts`
+- Automatically invalidates old caches on version mismatch
+- Increment when making breaking changes to cache structure
+
+### Shared Modules Pattern
+- `/src/shared/` contains reusable auth, API, and player logic
+- `/src/rounds/` contains round-specific implementations
+- DRY principle applied throughout
+
 ## Contributing
 
 This is a personal project, but feel free to fork and adapt for your own Music League games!
@@ -186,3 +296,7 @@ This is a personal project, but feel free to fork and adapt for your own Music L
 ## License
 
 MIT
+
+---
+
+**For detailed development documentation, see [CLAUDE.md](./CLAUDE.md)**
