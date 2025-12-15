@@ -313,7 +313,7 @@ export function Dashboard() {
               ROUND 1
             </div>
             <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
-              Shorties
+              "Shorties"
             </h1>
             <p className="text-xs md:text-base text-gray-600">
               Songs that are less than 2 minutes long

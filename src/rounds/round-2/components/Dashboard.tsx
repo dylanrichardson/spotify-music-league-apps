@@ -346,7 +346,7 @@ export function Dashboard() {
               ROUND 2
             </div>
             <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
-              Hidden gems
+              "Hidden gems"
             </h1>
             <p className="text-xs md:text-base text-gray-600">
               Best song from an artist with under 100k monthly listeners

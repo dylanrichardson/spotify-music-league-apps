@@ -330,7 +330,7 @@ export function Dashboard() {
               ROUND 5
             </div>
             <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
-              Songs released in your parents birth year
+              "Songs released in your parents birth year"
             </h1>
           </div>
         </div>
