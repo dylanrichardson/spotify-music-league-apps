@@ -32,17 +32,17 @@ export function Home() {
         <div className="bg-white rounded-2xl shadow-2xl p-6 md:p-12">
           <div className="text-center mb-6 md:mb-8">
             <h1 className="text-3xl md:text-5xl font-bold text-gray-900 mb-3 md:mb-4">
-              🎵 Music League Helper
+              Joe's Garageband Explorer
             </h1>
             <p className="text-base md:text-xl text-gray-600">
               Tools to help you find the perfect song for each Music League round
             </p>
           </div>
 
-          <div className="space-y-6">
+          <div>
             <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-6 md:mb-8">Rounds</h2>
 
-            {ROUNDS.map((round) => {
+            {[...ROUNDS].reverse().map((round) => {
               const emoji = ROUND_EMOJIS[round.number] || '🎵';
               const gradient = ROUND_GRADIENTS[round.number] || 'from-gray-50 to-gray-50';
               const hoverColor = ROUND_HOVER_COLORS[round.number] || 'hover:border-gray-500 group-hover:text-gray-600';
@@ -51,20 +51,17 @@ export function Home() {
                 return (
                   <div
                     key={round.number}
-                    className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 md:p-6 opacity-50 cursor-not-allowed"
+                    className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-4 md:p-6 opacity-50 cursor-not-allowed mb-4"
                   >
                     <div className="flex items-center gap-3 md:gap-4">
                       <div className="text-4xl md:text-5xl flex-shrink-0">{emoji}</div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="inline-block bg-gray-200 text-gray-600 text-xs font-bold px-2 py-1 rounded">
                             Round {round.number}
                           </span>
-                          <span className="inline-block bg-gray-200 text-gray-600 text-xs font-semibold px-2 py-1 rounded">
-                            Coming Soon
-                          </span>
                         </div>
-                        <h3 className="text-lg md:text-2xl font-bold text-gray-500 mt-1">
+                        <h3 className="text-lg md:text-2xl font-bold text-gray-500">
                           {round.title}
                         </h3>
                         {round.subtitle && (
@@ -80,7 +77,7 @@ export function Home() {
 
               return (
                 <Link key={round.number} to={round.path}>
-                  <div className={`bg-gradient-to-r ${gradient} border-2 border-gray-200 ${hoverColor} rounded-xl p-4 md:p-6 transition-all hover:shadow-lg cursor-pointer group`}>
+                  <div className={`bg-gradient-to-r ${gradient} border-2 border-gray-200 ${hoverColor} rounded-xl p-4 md:p-6 transition-all hover:shadow-lg cursor-pointer group mb-4`}>
                     <div className="flex items-center gap-3 md:gap-4">
                       <div className="text-4xl md:text-5xl flex-shrink-0">{emoji}</div>
                       <div className="flex-1 min-w-0">
