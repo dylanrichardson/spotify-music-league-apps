@@ -31,12 +31,20 @@ export interface CachedTrack {
 export interface CachedLibrary {
   tracks: CachedTrack[];
   timestamp: number;
+  lastSynced: number;
 }
 
 export interface CachedPlaylist {
   playlistId: string;
   tracks: CachedTrack[];
   timestamp: number;
+  lastSynced: number;
+}
+
+export interface CachedPlaylists {
+  playlists: SpotifyPlaylist[];
+  timestamp: number;
+  lastSynced: number;
 }
 
 export interface AuthTokens {

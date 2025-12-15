@@ -6,6 +6,10 @@ import {
   fetchPlaylistTracks,
   filterTracksByYears,
   getYearRange,
+  resyncLibrary,
+  resyncPlaylists,
+  getLibraryLastSync,
+  getPlaylistsLastSync,
 } from '../spotify-api';
 import { fetchUserProfile } from '../spotify-api';
 import { logout } from '../spotify-auth';
@@ -33,16 +37,26 @@ export function Dashboard() {
   const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(null);
   const [playerState, setPlayerState] = useState<any>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [syncingLibrary, setSyncingLibrary] = useState(false);
+  const [syncingPlaylists, setSyncingPlaylists] = useState(false);
+  const [libraryLastSync, setLibraryLastSync] = useState<number | null>(null);
+  const [playlistsLastSync, setPlaylistsLastSync] = useState<number | null>(null);
 
   useEffect(() => {
     loadProfile();
     loadPlaylists();
     initializePlayer();
+    updateLastSyncTimes();
 
     return () => {
       playerManager.disconnect();
     };
   }, []);
+
+  const updateLastSyncTimes = () => {
+    setLibraryLastSync(getLibraryLastSync());
+    setPlaylistsLastSync(getPlaylistsLastSync());
+  };
 
   const initializePlayer = async () => {
     try {
@@ -75,11 +89,71 @@ export function Dashboard() {
     try {
       const userPlaylists = await fetchUserPlaylists();
       setPlaylists(userPlaylists);
+      updateLastSyncTimes();
     } catch (err) {
       console.error('Failed to load playlists:', err);
     } finally {
       setLoadingPlaylists(false);
     }
+  };
+
+  const handleResyncLibrary = async () => {
+    setSyncingLibrary(true);
+    setError(null);
+
+    try {
+      const { added, removed } = await resyncLibrary((current, total) => {
+        setProgress({ current, total });
+      });
+
+      console.log(`Library resynced: ${added.length} added, ${removed.length} removed`);
+
+      // Update filtered tracks if library was the selected source
+      if (selectedPlaylist === 'library' && filteredTracks.length > 0) {
+        // Remove deleted tracks from filtered results
+        const removedSet = new Set(removed);
+        setFilteredTracks(prev => prev.filter(track => !removedSet.has(track.id)));
+      }
+
+      updateLastSyncTimes();
+    } catch (err) {
+      setError('Failed to resync library. Please try again.');
+      console.error(err);
+    } finally {
+      setSyncingLibrary(false);
+    }
+  };
+
+  const handleResyncPlaylists = async () => {
+    setSyncingPlaylists(true);
+    setError(null);
+
+    try {
+      const freshPlaylists = await resyncPlaylists();
+      setPlaylists(freshPlaylists);
+      updateLastSyncTimes();
+      console.log('Playlists resynced');
+    } catch (err) {
+      setError('Failed to resync playlists. Please try again.');
+      console.error(err);
+    } finally {
+      setSyncingPlaylists(false);
+    }
+  };
+
+  const formatLastSync = (timestamp: number | null): string => {
+    if (!timestamp) return 'Never';
+
+    const now = Date.now();
+    const diff = now - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return `${days}d ago`;
   };
 
   const getSortedTracks = (tracks: SpotifyTrack[]) => {
@@ -279,24 +353,55 @@ export function Dashboard() {
 
             {/* My Library Option */}
             <div
-              onClick={() => setSelectedPlaylist('library')}
-              className={`flex items-center gap-3 p-4 mb-3 rounded-lg border-2 cursor-pointer transition-all ${
+              className={`rounded-lg border-2 mb-3 transition-all ${
                 selectedPlaylist === 'library'
                   ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  : 'border-gray-200'
               }`}
             >
-              <input
-                type="radio"
-                checked={selectedPlaylist === 'library'}
-                onChange={() => setSelectedPlaylist('library')}
-                className="w-4 h-4 text-green-600"
-              />
-              <div className="flex-1">
-                <div className="font-semibold text-gray-800">My Library</div>
-                <div className="text-sm text-gray-500">All your saved songs</div>
+              <div
+                onClick={() => setSelectedPlaylist('library')}
+                className="flex items-center gap-3 p-4 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  checked={selectedPlaylist === 'library'}
+                  onChange={() => setSelectedPlaylist('library')}
+                  className="w-4 h-4 text-green-600"
+                />
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-800">My Library</div>
+                  <div className="text-sm text-gray-500">All your saved songs</div>
+                </div>
+                <div className="text-2xl">💿</div>
               </div>
-              <div className="text-2xl">💿</div>
+              <div className="px-4 pb-3 flex items-center justify-between gap-2">
+                <span className="text-xs text-gray-500">
+                  Last synced: {formatLastSync(libraryLastSync)}
+                </span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleResyncLibrary();
+                  }}
+                  disabled={syncingLibrary}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50 flex items-center gap-1"
+                >
+                  {syncingLibrary ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Resync
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Playlists Loading */}
@@ -312,9 +417,33 @@ export function Dashboard() {
             {/* Playlists Section */}
             {!loadingPlaylists && playlists.length > 0 && (
               <div className="border-t-2 border-gray-200 pt-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-gray-700">Or choose a playlist</span>
                   <span className="text-xs text-gray-500">{playlists.length} playlists</span>
+                </div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs text-gray-500">
+                    Last synced: {formatLastSync(playlistsLastSync)}
+                  </span>
+                  <button
+                    onClick={handleResyncPlaylists}
+                    disabled={syncingPlaylists}
+                    className="text-xs text-blue-600 hover:text-blue-700 font-semibold disabled:opacity-50 flex items-center gap-1"
+                  >
+                    {syncingPlaylists ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                        Syncing...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Resync
+                      </>
+                    )}
+                  </button>
                 </div>
 
                 {/* Search Input */}
