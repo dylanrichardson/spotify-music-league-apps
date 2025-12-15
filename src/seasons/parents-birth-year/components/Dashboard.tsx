@@ -26,6 +26,7 @@ export function Dashboard() {
   const [sortBy, setSortBy] = useState<'year' | 'artist' | 'name' | 'album'>('year');
   const [playlistSearch, setPlaylistSearch] = useState('');
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
+  const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -359,134 +360,246 @@ export function Dashboard() {
         {/* Results */}
         {filteredTracks.length > 0 && (
           <div className="bg-white rounded-lg shadow-xl p-4 md:p-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
-              <h2 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span>Found {filteredTracks.length} songs</span>
-                {loading && (
-                  <span className="text-xs md:text-sm font-normal text-gray-500">(searching...)</span>
-                )}
-              </h2>
+            <div className="flex flex-col gap-3 mb-4 md:mb-6">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                  <span>Found {filteredTracks.length} songs</span>
+                  {loading && (
+                    <span className="text-xs md:text-sm font-normal text-gray-500">(searching...)</span>
+                  )}
+                </h2>
 
-              {/* View Toggle - Icons only */}
-              <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'list'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="List view"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-md transition-colors ${
-                    viewMode === 'grid'
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Grid view"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                  </svg>
-                </button>
+                {/* View Toggle - Icons only */}
+                <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setViewMode('list')}
+                    className={`p-2 rounded-md transition-colors ${
+                      viewMode === 'list'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    title="List view"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('grid')}
+                    className={`p-2 rounded-md transition-colors ${
+                      viewMode === 'grid'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                    title="Grid view"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
+
+              {/* Sort buttons - visible on mobile */}
+              {viewMode === 'list' && (
+                <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
+                  <button
+                    onClick={() => setSortBy('year')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                      sortBy === 'year'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Year {sortBy === 'year' && '↓'}
+                  </button>
+                  <button
+                    onClick={() => setSortBy('name')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                      sortBy === 'name'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Song {sortBy === 'name' && '↓'}
+                  </button>
+                  <button
+                    onClick={() => setSortBy('artist')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                      sortBy === 'artist'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Artist {sortBy === 'artist' && '↓'}
+                  </button>
+                  <button
+                    onClick={() => setSortBy('album')}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
+                      sortBy === 'album'
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Album {sortBy === 'album' && '↓'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {viewMode === 'list' ? (
-              /* List View - Table */
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-2 md:py-3 px-1 md:px-4 w-10 md:w-12"></th>
-                      <th
-                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => setSortBy('name')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Song
-                          {sortBy === 'name' && <span className="text-blue-600">↓</span>}
+              <>
+                {/* Mobile List View */}
+                <div className="md:hidden space-y-0">
+                  {getSortedTracks(filteredTracks).map((track) => (
+                    <div key={track.id} className="border-b border-gray-100 last:border-0">
+                      <div className="flex items-center gap-3 py-3 px-2">
+                        {/* Album Cover */}
+                        {track.album.images[0] && (
+                          <img
+                            src={track.album.images[0].url}
+                            alt={track.album.name}
+                            className="w-12 h-12 rounded object-contain bg-gray-100 flex-shrink-0"
+                          />
+                        )}
+
+                        {/* Song & Artist stacked */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-gray-900 truncate">
+                            {track.name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {track.artists.map((a) => a.name).join(', ')}
+                          </div>
                         </div>
-                      </th>
-                      <th
-                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none hidden sm:table-cell"
-                        onClick={() => setSortBy('artist')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Artist
-                          {sortBy === 'artist' && <span className="text-blue-600">↓</span>}
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none hidden lg:table-cell"
-                        onClick={() => setSortBy('album')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Album
-                          {sortBy === 'album' && <span className="text-blue-600">↓</span>}
-                        </div>
-                      </th>
-                      <th
-                        className="text-left py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm font-semibold text-gray-700 w-14 md:w-20 cursor-pointer hover:bg-gray-50 select-none"
-                        onClick={() => setSortBy('year')}
-                      >
-                        <div className="flex items-center gap-1">
-                          Year
-                          {sortBy === 'year' && <span className="text-blue-600">↓</span>}
-                        </div>
-                      </th>
-                      <th className="py-2 md:py-3 px-1 md:px-4 w-12 md:w-24"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getSortedTracks(filteredTracks).map((track) => (
-                      <tr
-                        key={track.id}
-                        className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
-                      >
-                        <td className="py-1.5 md:py-2 px-1 md:px-4">
-                          {track.album.images[0] && (
-                            <img
-                              src={track.album.images[0].url}
-                              alt={track.album.name}
-                              className="w-8 h-8 md:w-10 md:h-10 rounded object-contain bg-gray-100"
-                            />
-                          )}
-                        </td>
-                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm font-medium text-gray-800">
-                          <div className="truncate max-w-[120px] md:max-w-xs">{track.name}</div>
-                          <div className="text-xs text-gray-500 truncate max-w-[120px] sm:hidden">{track.artists.map((a) => a.name).join(', ')}</div>
-                        </td>
-                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-600 truncate max-w-xs hidden sm:table-cell">
-                          {track.artists.map((a) => a.name).join(', ')}
-                        </td>
-                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-500 truncate max-w-xs hidden lg:table-cell">
-                          {track.album.name}
-                        </td>
-                        <td className="py-1.5 md:py-2 px-2 md:px-4 text-xs md:text-sm text-gray-500">
+
+                        {/* Year */}
+                        <div className="text-xs text-gray-600 font-medium flex-shrink-0">
                           {track.album.release_date.split('-')[0]}
-                        </td>
-                        <td className="py-1.5 md:py-2 px-1 md:px-4">
+                        </div>
+
+                        {/* Expand button */}
+                        <button
+                          onClick={() => setExpandedTrack(expandedTrack === track.id ? null : track.id)}
+                          className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                          </svg>
+                        </button>
+                      </div>
+
+                      {/* Expanded Details */}
+                      {expandedTrack === track.id && (
+                        <div className="px-2 pb-3 pt-0 bg-gray-50">
+                          <div className="text-xs text-gray-600 mb-2">
+                            <span className="font-semibold">Album:</span> {track.album.name}
+                          </div>
                           <a
                             href={`https://open.spotify.com/track/${track.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-green-600 hover:text-green-700 font-semibold md:opacity-0 md:group-hover:opacity-100 transition-opacity inline-block"
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 hover:text-green-700"
                           >
-                            ↗
+                            Open in Spotify
+                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
                           </a>
-                        </td>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="py-3 px-4 w-12"></th>
+                        <th
+                          className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                          onClick={() => setSortBy('name')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Song
+                            {sortBy === 'name' && <span className="text-blue-600">↓</span>}
+                          </div>
+                        </th>
+                        <th
+                          className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                          onClick={() => setSortBy('artist')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Artist
+                            {sortBy === 'artist' && <span className="text-blue-600">↓</span>}
+                          </div>
+                        </th>
+                        <th
+                          className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
+                          onClick={() => setSortBy('album')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Album
+                            {sortBy === 'album' && <span className="text-blue-600">↓</span>}
+                          </div>
+                        </th>
+                        <th
+                          className="text-left py-3 px-4 text-sm font-semibold text-gray-700 w-20 cursor-pointer hover:bg-gray-50 select-none"
+                          onClick={() => setSortBy('year')}
+                        >
+                          <div className="flex items-center gap-1">
+                            Year
+                            {sortBy === 'year' && <span className="text-blue-600">↓</span>}
+                          </div>
+                        </th>
+                        <th className="py-3 px-4 w-24"></th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {getSortedTracks(filteredTracks).map((track) => (
+                        <tr
+                          key={track.id}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors group"
+                        >
+                          <td className="py-2 px-4">
+                            {track.album.images[0] && (
+                              <img
+                                src={track.album.images[0].url}
+                                alt={track.album.name}
+                                className="w-10 h-10 rounded object-contain bg-gray-100"
+                              />
+                            )}
+                          </td>
+                          <td className="py-2 px-4 text-sm font-medium text-gray-800 truncate max-w-xs">
+                            {track.name}
+                          </td>
+                          <td className="py-2 px-4 text-sm text-gray-600 truncate max-w-xs">
+                            {track.artists.map((a) => a.name).join(', ')}
+                          </td>
+                          <td className="py-2 px-4 text-sm text-gray-500 truncate max-w-xs">
+                            {track.album.name}
+                          </td>
+                          <td className="py-2 px-4 text-sm text-gray-500">
+                            {track.album.release_date.split('-')[0]}
+                          </td>
+                          <td className="py-2 px-4">
+                            <a
+                              href={`https://open.spotify.com/track/${track.id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-green-600 hover:text-green-700 font-semibold opacity-0 group-hover:opacity-100 transition-opacity inline-block"
+                            >
+                              Open ↗
+                            </a>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             ) : (
               /* Grid View */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
