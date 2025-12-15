@@ -6,11 +6,11 @@ import {
   fetchPlaylistTracks,
   filterTracksByYears,
   getYearRange,
-  playTrack,
 } from '../spotify-api';
 import { fetchUserProfile } from '../spotify-api';
 import { logout } from '../spotify-auth';
 import type { SpotifyTrack, SpotifyPlaylist, UserProfile } from '../types';
+import { playerManager, type PlaybackMode } from '../player';
 
 export function Dashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -30,11 +30,36 @@ export function Dashboard() {
   const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [playbackMode, setPlaybackMode] = useState<PlaybackMode>(null);
+  const [playerState, setPlayerState] = useState<any>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     loadProfile();
     loadPlaylists();
+    initializePlayer();
+
+    return () => {
+      playerManager.disconnect();
+    };
   }, []);
+
+  const initializePlayer = async () => {
+    try {
+      const mode = await playerManager.initialize((state) => {
+        setPlayerState(state);
+        setIsPlaying(!state?.paused);
+        if (state?.track_window?.current_track) {
+          setPlayingTrackId(state.track_window.current_track.id);
+        }
+      });
+      setPlaybackMode(mode);
+      console.log('Playback mode:', mode === 'sdk' ? 'Web Playback SDK (Premium)' : 'Spotify Connect (Fallback)');
+    } catch (err) {
+      console.error('Failed to initialize player:', err);
+      setPlaybackMode('connect');
+    }
+  };
 
   const loadProfile = async () => {
     try {
@@ -82,11 +107,19 @@ export function Dashboard() {
     setPlayingTrackId(track.id);
 
     try {
-      await playTrack(track.uri);
+      await playerManager.playTrack(track.uri);
     } catch (err) {
       setPlaybackError(err instanceof Error ? err.message : 'Failed to play track');
       setPlayingTrackId(null);
       console.error('Playback error:', err);
+    }
+  };
+
+  const handleTogglePlay = async () => {
+    try {
+      await playerManager.togglePlay();
+    } catch (err) {
+      setPlaybackError(err instanceof Error ? err.message : 'Failed to toggle playback');
     }
   };
 
@@ -157,7 +190,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
-      <div className="container mx-auto px-4 py-4 md:py-8">
+      <div className={`container mx-auto px-4 py-4 md:py-8 ${playbackMode === 'sdk' && playerState?.track_window?.current_track ? 'pb-24' : ''}`}>
         {/* Header */}
         <div className="bg-white rounded-lg shadow-xl p-4 md:p-6 mb-4 md:mb-8 max-w-4xl mx-auto">
           <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
@@ -718,6 +751,67 @@ export function Dashboard() {
           </div>
         )}
       </div>
+
+      {/* Mini Player - Only shown for SDK mode */}
+      {playbackMode === 'sdk' && playerState?.track_window?.current_track && (
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-gray-900 to-gray-800 border-t border-gray-700 shadow-2xl">
+          <div className="container mx-auto px-4 py-3">
+            <div className="flex items-center gap-4">
+              {/* Album Cover */}
+              {playerState.track_window.current_track.album.images[0] && (
+                <img
+                  src={playerState.track_window.current_track.album.images[0].url}
+                  alt={playerState.track_window.current_track.album.name}
+                  className="w-14 h-14 rounded shadow-lg hidden sm:block"
+                />
+              )}
+
+              {/* Track Info */}
+              <div className="flex-1 min-w-0">
+                <div className="font-medium text-white text-sm truncate">
+                  {playerState.track_window.current_track.name}
+                </div>
+                <div className="text-xs text-gray-400 truncate">
+                  {playerState.track_window.current_track.artists.map((a: any) => a.name).join(', ')}
+                </div>
+                {/* Progress bar */}
+                <div className="mt-1 bg-gray-700 rounded-full h-1 hidden md:block">
+                  <div
+                    className="bg-green-500 h-1 rounded-full transition-all"
+                    style={{
+                      width: `${(playerState.position / playerState.duration) * 100}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Play/Pause Button */}
+              <button
+                onClick={handleTogglePlay}
+                className="bg-white text-gray-900 rounded-full p-3 hover:scale-105 transition-transform shadow-lg"
+              >
+                {isPlaying ? (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+
+              {/* Mode indicator */}
+              <div className="hidden lg:flex items-center gap-2 text-xs text-gray-400 bg-gray-800 px-3 py-1.5 rounded-full">
+                <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Playing in browser
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
