@@ -36,12 +36,30 @@ async function getAccessToken(): Promise<string> {
   let tokens = getStoredTokens();
 
   if (!tokens) {
+    // Clear any stale data and redirect to login
+    localStorage.removeItem('spotify_tokens');
+    localStorage.removeItem('code_verifier');
+    localStorage.removeItem('cached_library');
+    localStorage.removeItem('user_profile');
+    localStorage.removeItem('cached_playlists');
+    window.location.href = '/spotify-music-league-apps/parents-birth-year';
     throw new Error('No authentication tokens found');
   }
 
   // Check if token needs refresh (within 5 minutes of expiry)
   if (Date.now() >= tokens.expires_at - 5 * 60 * 1000) {
-    tokens = await refreshAccessToken(tokens.refresh_token);
+    try {
+      tokens = await refreshAccessToken(tokens.refresh_token);
+    } catch (err) {
+      // Refresh failed, clear tokens and redirect to login
+      localStorage.removeItem('spotify_tokens');
+      localStorage.removeItem('code_verifier');
+      localStorage.removeItem('cached_library');
+      localStorage.removeItem('user_profile');
+      localStorage.removeItem('cached_playlists');
+      window.location.href = '/spotify-music-league-apps/parents-birth-year';
+      throw err;
+    }
   }
 
   return tokens.access_token;
@@ -140,6 +158,21 @@ export async function fetchLibraryTracks(
 
 // Fetch user's playlists
 export async function fetchUserPlaylists(): Promise<SpotifyPlaylist[]> {
+  // Check cache first (24 hour cache since playlists don't change often)
+  const cached = localStorage.getItem('cached_playlists');
+  if (cached) {
+    try {
+      const cachedData = JSON.parse(cached);
+      // Cache valid for 24 hours
+      if (Date.now() - cachedData.timestamp < 24 * 60 * 60 * 1000) {
+        return cachedData.playlists;
+      }
+    } catch (err) {
+      console.error('Failed to parse cached playlists, will refetch:', err);
+      localStorage.removeItem('cached_playlists');
+    }
+  }
+
   const playlists: SpotifyPlaylist[] = [];
   let offset = 0;
   const limit = 50;
@@ -157,6 +190,16 @@ export async function fetchUserPlaylists(): Promise<SpotifyPlaylist[]> {
     }
 
     offset += limit;
+  }
+
+  // Cache the playlists
+  try {
+    localStorage.setItem('cached_playlists', JSON.stringify({
+      playlists,
+      timestamp: Date.now(),
+    }));
+  } catch (err) {
+    console.warn('Failed to cache playlists (quota exceeded):', err);
   }
 
   return playlists;

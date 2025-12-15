@@ -150,6 +150,7 @@ export function logout(): void {
   localStorage.removeItem('spotify_tokens');
   localStorage.removeItem('code_verifier');
   localStorage.removeItem('cached_library');
+  localStorage.removeItem('cached_playlists');
   localStorage.removeItem('user_profile');
   window.location.href = '/spotify-music-league-apps/';
 }
