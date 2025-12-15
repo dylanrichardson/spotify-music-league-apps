@@ -140,35 +140,35 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-red-500">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4 md:py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-xl p-6 mb-8 max-w-4xl mx-auto">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-4">
+        <div className="bg-white rounded-lg shadow-xl p-4 md:p-6 mb-4 md:mb-8 max-w-4xl mx-auto">
+          <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+            <div className="flex items-center gap-3 md:gap-4">
               {profile?.images?.[0]?.url && (
                 <img
                   src={profile.images[0].url}
                   alt={profile.display_name}
-                  className="w-12 h-12 rounded-full"
+                  className="w-10 h-10 md:w-12 md:h-12 rounded-full flex-shrink-0"
                 />
               )}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-800">
+              <div className="min-w-0">
+                <h1 className="text-lg md:text-2xl font-bold text-gray-800 truncate">
                   Parents' Birth Year Finder
                 </h1>
-                <p className="text-gray-600">Welcome, {profile?.display_name || 'User'}!</p>
+                <p className="text-sm md:text-base text-gray-600 truncate">Welcome, {profile?.display_name || 'User'}!</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               <Link
                 to="/"
-                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-6 rounded-full transition-colors"
+                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 md:px-6 rounded-full transition-colors text-sm md:text-base"
               >
                 ← Home
               </Link>
               <button
                 onClick={logout}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded-full transition-colors"
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 md:px-6 rounded-full transition-colors text-sm md:text-base"
               >
                 Logout
               </button>
@@ -177,16 +177,16 @@ export function Dashboard() {
         </div>
 
         {/* Filter Controls */}
-        <div className="bg-white rounded-lg shadow-xl p-8 mb-8 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+        <div className="bg-white rounded-lg shadow-xl p-4 md:p-8 mb-4 md:mb-8 max-w-4xl mx-auto">
+          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 text-center">
             Enter Birth Years
           </h2>
 
-          <div className="flex flex-col md:flex-row gap-6 mb-6 max-w-2xl mx-auto">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-6 max-w-2xl mx-auto">
             {/* Dad's Birth Year */}
             <div className="flex-1">
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl">
+                <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-3xl md:text-4xl">
                   👨
                 </div>
                 <input
@@ -195,9 +195,9 @@ export function Dashboard() {
                   onChange={(e) => setDadBirthYear(e.target.value)}
                   min="1900"
                   max="2024"
-                  className="w-full pl-16 pr-4 py-4 text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
+                  className="w-full pl-14 md:pl-16 pr-3 md:pr-4 py-3 md:py-4 text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
                 />
-                <label className="absolute -top-3 left-14 bg-white px-2 text-sm font-semibold text-gray-700">
+                <label className="absolute -top-3 left-12 md:left-14 bg-white px-2 text-xs md:text-sm font-semibold text-gray-700">
                   Dad's Birth Year
                 </label>
               </div>
@@ -206,7 +206,7 @@ export function Dashboard() {
             {/* Mom's Birth Year */}
             <div className="flex-1">
               <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-4xl">
+                <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-3xl md:text-4xl">
                   👩
                 </div>
                 <input
@@ -215,9 +215,9 @@ export function Dashboard() {
                   onChange={(e) => setMomBirthYear(e.target.value)}
                   min="1900"
                   max="2024"
-                  className="w-full pl-16 pr-4 py-4 text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-pink-300 focus:border-pink-500 transition-all shadow-sm hover:shadow-md"
+                  className="w-full pl-14 md:pl-16 pr-3 md:pr-4 py-3 md:py-4 text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-pink-300 focus:border-pink-500 transition-all shadow-sm hover:shadow-md"
                 />
-                <label className="absolute -top-3 left-14 bg-white px-2 text-sm font-semibold text-gray-700">
+                <label className="absolute -top-3 left-12 md:left-14 bg-white px-2 text-xs md:text-sm font-semibold text-gray-700">
                   Mom's Birth Year
                 </label>
               </div>
@@ -358,12 +358,12 @@ export function Dashboard() {
 
         {/* Results */}
         {filteredTracks.length > 0 && (
-          <div className="bg-white rounded-lg shadow-xl p-6">
-            <div className="flex items-center justify-between gap-4 mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+          <div className="bg-white rounded-lg shadow-xl p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 md:gap-4 mb-4 md:mb-6">
+              <h2 className="text-lg md:text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <span>Found {filteredTracks.length} songs</span>
                 {loading && (
-                  <span className="text-sm font-normal text-gray-500">(searching...)</span>
+                  <span className="text-xs md:text-sm font-normal text-gray-500">(searching...)</span>
                 )}
               </h2>
 
@@ -530,12 +530,12 @@ export function Dashboard() {
         )}
 
         {!loading && filteredTracks.length === 0 && progress.total > 0 && (
-          <div className="bg-white rounded-lg shadow-xl p-8 text-center">
-            <p className="text-gray-600 text-lg">
+          <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 text-center">
+            <p className="text-gray-600 text-base md:text-lg">
               No songs found from {dadBirthYear} or {momBirthYear} in your{' '}
               {selectedPlaylist === 'library' ? 'library' : 'selected playlist'}.
             </p>
-            <p className="text-gray-500 text-sm mt-2">
+            <p className="text-gray-500 text-xs md:text-sm mt-2">
               Searched {progress.total} tracks
             </p>
           </div>
