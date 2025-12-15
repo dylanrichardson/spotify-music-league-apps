@@ -278,29 +278,29 @@ export function Dashboard() {
         {/* Header */}
         <div className="bg-white rounded-lg shadow-xl p-4 md:p-6 mb-4 md:mb-8 max-w-4xl mx-auto">
           {/* Top bar: Profile + Navigation */}
-          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
+          <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 gap-3">
+            <div className="flex items-center gap-2 md:gap-3 min-w-0">
               {profile?.images?.[0]?.url && (
                 <img
                   src={profile.images[0].url}
                   alt={profile.display_name}
-                  className="w-10 h-10 rounded-full"
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0"
                 />
               )}
-              <span className="text-sm md:text-base text-gray-700 font-medium">
+              <span className="text-xs md:text-base text-gray-700 font-medium truncate">
                 {profile?.display_name || 'User'}
               </span>
             </div>
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Link
                 to="/"
-                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-4 md:px-6 rounded-full transition-colors text-sm md:text-base"
+                className="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-2 px-3 md:px-6 rounded-full transition-colors text-xs md:text-base whitespace-nowrap"
               >
                 ← Home
               </Link>
               <button
                 onClick={logout}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 md:px-6 rounded-full transition-colors text-sm md:text-base"
+                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-3 md:px-6 rounded-full transition-colors text-xs md:text-base"
               >
                 Logout
               </button>
@@ -308,14 +308,14 @@ export function Dashboard() {
           </div>
 
           {/* Round Title */}
-          <div className="text-center">
-            <div className="inline-block bg-purple-100 text-purple-800 text-xs font-bold px-3 py-1 rounded-full mb-2">
+          <div className="text-center pt-2">
+            <div className="inline-block bg-purple-100 text-purple-800 text-xs font-bold px-3 py-1 rounded-full mb-3">
               ROUND 1
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+            <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
               Shorties
             </h1>
-            <p className="text-sm md:text-base text-gray-600 mt-2">
+            <p className="text-xs md:text-base text-gray-600">
               Songs that are less than 2 minutes long
             </p>
           </div>
