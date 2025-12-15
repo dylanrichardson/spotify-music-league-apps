@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Home } from './components/Home';
+import { NotFound } from './components/NotFound';
 import { Round1App } from './rounds/round-1/Round1App';
 import { Round2App } from './rounds/round-2/Round2App';
 import { Round5App } from './rounds/round-5/Round5App';
@@ -17,6 +18,9 @@ function App() {
 
         {/* Legacy redirect - parents-birth-year redirects to round-5 */}
         <Route path="/parents-birth-year/*" element={<Navigate to="/round-5" replace />} />
+
+        {/* 404 catch-all */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

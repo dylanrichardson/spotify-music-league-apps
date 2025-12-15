@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { redirectToSpotifyAuth } from '../../../shared/spotify-auth';
 
-const ROUND_PATH = '/spotify-music-league-apps/round-2';
+const ROUND_PATH = '/round-2';
 
 export function Login() {
   const handleLogin = () => {

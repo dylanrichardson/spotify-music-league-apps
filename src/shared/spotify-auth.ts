@@ -14,10 +14,13 @@ const SCOPES = [
 
 // Get redirect URI for a specific round
 function getRedirectURI(roundPath: string): string {
+  const basePath = '/spotify-music-league-apps';
+  const fullPath = `${basePath}${roundPath}`;
+
   const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
   return isLocalhost
-    ? `http://127.0.0.1:8080${roundPath}`
-    : `${window.location.origin}${roundPath}`;
+    ? `http://127.0.0.1:8080${fullPath}`
+    : `${window.location.origin}${fullPath}`;
 }
 
 // Generate code verifier for PKCE
