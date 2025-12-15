@@ -511,10 +511,10 @@ export function Dashboard() {
           </button>
 
           {/* Progress Bar */}
-          {loading && progress.total > 0 && (
+          {(loading || syncingLibrary) && progress.total > 0 && (
             <div className="mt-4">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Processing tracks...</span>
+                <span>{syncingLibrary ? 'Syncing library...' : 'Processing tracks...'}</span>
                 <span>{progress.current} / {progress.total}</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
