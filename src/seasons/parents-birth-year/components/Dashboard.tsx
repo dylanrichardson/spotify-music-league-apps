@@ -29,6 +29,7 @@ export function Dashboard() {
   const [progress, setProgress] = useState<{ current: number; total: number }>({ current: 0, total: 0 });
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [sortBy, setSortBy] = useState<'year' | 'artist' | 'name' | 'album'>('year');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [playlistSearch, setPlaylistSearch] = useState('');
   const [loadingPlaylists, setLoadingPlaylists] = useState(true);
   const [expandedTrack, setExpandedTrack] = useState<string | null>(null);
@@ -156,21 +157,34 @@ export function Dashboard() {
     return `${days}d ago`;
   };
 
+  const handleSort = (field: 'year' | 'artist' | 'name' | 'album') => {
+    if (sortBy === field) {
+      // Toggle direction if clicking the same field
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // New field, default to ascending
+      setSortBy(field);
+      setSortDirection('asc');
+    }
+  };
+
   const getSortedTracks = (tracks: SpotifyTrack[]) => {
     const sorted = [...tracks];
+    const multiplier = sortDirection === 'asc' ? 1 : -1;
+
     switch (sortBy) {
       case 'year':
-        return sorted.sort((a, b) => a.album.release_date.localeCompare(b.album.release_date));
+        return sorted.sort((a, b) => a.album.release_date.localeCompare(b.album.release_date) * multiplier);
       case 'artist':
         return sorted.sort((a, b) => {
           const aArtist = a.artists[0]?.name || '';
           const bArtist = b.artists[0]?.name || '';
-          return aArtist.localeCompare(bArtist);
+          return aArtist.localeCompare(bArtist) * multiplier;
         });
       case 'name':
-        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+        return sorted.sort((a, b) => a.name.localeCompare(b.name) * multiplier);
       case 'album':
-        return sorted.sort((a, b) => a.album.name.localeCompare(b.album.name));
+        return sorted.sort((a, b) => a.album.name.localeCompare(b.album.name) * multiplier);
       default:
         return sorted;
     }
@@ -602,44 +616,44 @@ export function Dashboard() {
               {viewMode === 'list' && (
                 <div className="flex gap-2 overflow-x-auto pb-1 md:hidden">
                   <button
-                    onClick={() => setSortBy('year')}
+                    onClick={() => handleSort('year')}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                       sortBy === 'year'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Year {sortBy === 'year' && '↓'}
+                    Year {sortBy === 'year' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
                   <button
-                    onClick={() => setSortBy('name')}
+                    onClick={() => handleSort('name')}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                       sortBy === 'name'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Song {sortBy === 'name' && '↓'}
+                    Song {sortBy === 'name' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
                   <button
-                    onClick={() => setSortBy('artist')}
+                    onClick={() => handleSort('artist')}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                       sortBy === 'artist'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Artist {sortBy === 'artist' && '↓'}
+                    Artist {sortBy === 'artist' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
                   <button
-                    onClick={() => setSortBy('album')}
+                    onClick={() => handleSort('album')}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
                       sortBy === 'album'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    Album {sortBy === 'album' && '↓'}
+                    Album {sortBy === 'album' && (sortDirection === 'asc' ? '↑' : '↓')}
                   </button>
                 </div>
               )}
@@ -734,38 +748,38 @@ export function Dashboard() {
                         <th className="py-3 px-4 w-12"></th>
                         <th
                           className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
-                          onClick={() => setSortBy('name')}
+                          onClick={() => handleSort('name')}
                         >
                           <div className="flex items-center gap-1">
                             Song
-                            {sortBy === 'name' && <span className="text-blue-600">↓</span>}
+                            {sortBy === 'name' && <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                           </div>
                         </th>
                         <th
                           className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
-                          onClick={() => setSortBy('artist')}
+                          onClick={() => handleSort('artist')}
                         >
                           <div className="flex items-center gap-1">
                             Artist
-                            {sortBy === 'artist' && <span className="text-blue-600">↓</span>}
+                            {sortBy === 'artist' && <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                           </div>
                         </th>
                         <th
                           className="text-left py-3 px-4 text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-50 select-none"
-                          onClick={() => setSortBy('album')}
+                          onClick={() => handleSort('album')}
                         >
                           <div className="flex items-center gap-1">
                             Album
-                            {sortBy === 'album' && <span className="text-blue-600">↓</span>}
+                            {sortBy === 'album' && <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                           </div>
                         </th>
                         <th
                           className="text-left py-3 px-4 text-sm font-semibold text-gray-700 w-20 cursor-pointer hover:bg-gray-50 select-none"
-                          onClick={() => setSortBy('year')}
+                          onClick={() => handleSort('year')}
                         >
                           <div className="flex items-center gap-1">
                             Year
-                            {sortBy === 'year' && <span className="text-blue-600">↓</span>}
+                            {sortBy === 'year' && <span className="text-blue-600">{sortDirection === 'asc' ? '↑' : '↓'}</span>}
                           </div>
                         </th>
                         <th className="py-3 px-4 w-24"></th>
