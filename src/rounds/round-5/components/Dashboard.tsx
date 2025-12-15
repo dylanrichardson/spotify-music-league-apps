@@ -33,8 +33,7 @@ function getYearRange(birthYear: number): { start: number; end: number } {
 
 export function Dashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [dadBirthYear, setDadBirthYear] = useState('1960');
-  const [momBirthYear, setMomBirthYear] = useState('1963');
+  const [birthYear, setBirthYear] = useState('1960');
   const [filteredTracks, setFilteredTracks] = useState<SpotifyTrack[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
@@ -229,16 +228,15 @@ export function Dashboard() {
   };
 
   const handleFilter = async () => {
-    if (!dadBirthYear || !momBirthYear) {
-      setError('Please enter both birth years');
+    if (!birthYear) {
+      setError('Please enter a birth year');
       return;
     }
 
-    const dadYear = parseInt(dadBirthYear);
-    const momYear = parseInt(momBirthYear);
+    const year = parseInt(birthYear);
 
-    if (isNaN(dadYear) || isNaN(momYear)) {
-      setError('Please enter valid years');
+    if (isNaN(year)) {
+      setError('Please enter a valid year');
       return;
     }
 
@@ -248,19 +246,17 @@ export function Dashboard() {
     setProgress({ current: 0, total: 0 });
 
     try {
-      const dadRange = getYearRange(dadYear);
-      const momRange = getYearRange(momYear);
+      const yearRange = getYearRange(year);
       const matchedIds = new Set<string>();
 
       const handleProgress = (current: number, total: number, newTracks: SpotifyTrack[]) => {
         setProgress({ current, total });
 
         // Filter new tracks and add them progressively
-        const dadMatches = filterTracksByYears(newTracks, dadRange.start, dadRange.end);
-        const momMatches = filterTracksByYears(newTracks, momRange.start, momRange.end);
+        const matches = filterTracksByYears(newTracks, yearRange.start, yearRange.end);
 
         const newMatches: SpotifyTrack[] = [];
-        [...dadMatches, ...momMatches].forEach((track) => {
+        matches.forEach((track) => {
           if (!matchedIds.has(track.id)) {
             matchedIds.add(track.id);
             newMatches.push(track);
@@ -336,57 +332,37 @@ export function Dashboard() {
             <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
               Songs released in your parents birth year
             </h1>
-            <p className="text-xs md:text-base text-gray-600">
-              Find tracks from your mom and dad's birth years
-            </p>
           </div>
         </div>
 
         {/* Filter Controls */}
         <div className="bg-white rounded-lg shadow-xl p-4 md:p-8 mb-4 md:mb-8 max-w-4xl mx-auto">
           <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4 md:mb-6 text-center">
-            Enter Birth Years
+            Enter Birth Year
           </h2>
 
-          <div className="flex flex-col md:flex-row gap-4 md:gap-6 mb-4 md:mb-6 max-w-2xl mx-auto">
-            {/* Dad's Birth Year */}
-            <div className="flex-1">
+          <div className="flex flex-col gap-4 md:gap-6 mb-4 md:mb-6 max-w-md mx-auto">
+            {/* Birth Year */}
+            <div>
               <div className="relative">
                 <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-3xl md:text-4xl">
-                  👨
+                  🎂
                 </div>
                 <input
                   type="number"
-                  value={dadBirthYear}
-                  onChange={(e) => setDadBirthYear(e.target.value)}
+                  value={birthYear}
+                  onChange={(e) => setBirthYear(e.target.value)}
                   min="1900"
                   max="2024"
-                  className="w-full pl-14 md:pl-16 pr-3 md:pr-4 py-3 md:py-4 text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all shadow-sm hover:shadow-md"
+                  className="w-full pl-14 md:pl-16 pr-3 md:pr-4 py-3 md:py-4 text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-green-300 focus:border-green-500 transition-all shadow-sm hover:shadow-md"
                 />
                 <label className="absolute -top-3 left-12 md:left-14 bg-white px-2 text-xs md:text-sm font-semibold text-gray-700">
-                  Dad's Birth Year
+                  Birth Year
                 </label>
               </div>
-            </div>
-
-            {/* Mom's Birth Year */}
-            <div className="flex-1">
-              <div className="relative">
-                <div className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-3xl md:text-4xl">
-                  👩
-                </div>
-                <input
-                  type="number"
-                  value={momBirthYear}
-                  onChange={(e) => setMomBirthYear(e.target.value)}
-                  min="1900"
-                  max="2024"
-                  className="w-full pl-14 md:pl-16 pr-3 md:pr-4 py-3 md:py-4 text-lg md:text-xl font-semibold border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-pink-300 focus:border-pink-500 transition-all shadow-sm hover:shadow-md"
-                />
-                <label className="absolute -top-3 left-12 md:left-14 bg-white px-2 text-xs md:text-sm font-semibold text-gray-700">
-                  Mom's Birth Year
-                </label>
-              </div>
+              <p className="text-xs text-gray-500 mt-2 text-center">
+                Enter any year between 1900 and 2024
+              </p>
             </div>
           </div>
 
@@ -547,7 +523,7 @@ export function Dashboard() {
 
           <button
             onClick={handleFilter}
-            disabled={loading || !dadBirthYear || !momBirthYear}
+            disabled={loading || !birthYear}
             className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white font-bold py-3 px-8 rounded-full transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? (
@@ -924,7 +900,7 @@ export function Dashboard() {
         {!loading && filteredTracks.length === 0 && progress.total > 0 && (
           <div className="bg-white rounded-lg shadow-xl p-6 md:p-8 text-center">
             <p className="text-gray-600 text-base md:text-lg">
-              No songs found from {dadBirthYear} or {momBirthYear} in your{' '}
+              No songs found from {birthYear} in your{' '}
               {selectedPlaylist === 'library' ? 'library' : 'selected playlist'}.
             </p>
             <p className="text-gray-500 text-xs md:text-sm mt-2">
