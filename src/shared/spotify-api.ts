@@ -49,7 +49,7 @@ const API_BASE = 'https://api.spotify.com/v1';
 
 // Get access token, refreshing if needed
 async function getAccessToken(): Promise<string> {
-  let tokens = getStoredTokens();
+  let tokens = await getStoredTokens();
 
   if (!tokens) {
     // Clear any stale data and redirect to login

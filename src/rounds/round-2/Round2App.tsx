@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Login } from './components/Login';
 import { Dashboard } from './components/Dashboard';
-import { getStoredTokens } from '../../shared/spotify-auth';
+import { getStoredTokensSync } from '../../shared/spotify-auth';
 
 export function Round2App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -11,7 +11,7 @@ export function Round2App() {
     // Set page title
     document.title = "Round 2: Hidden Gems - Music League Helper";
 
-    const tokens = getStoredTokens();
+    const tokens = getStoredTokensSync();
     setIsAuthenticated(!!tokens);
     setIsLoading(false);
   }, []);

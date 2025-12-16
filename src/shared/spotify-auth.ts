@@ -116,14 +116,38 @@ export async function exchangeCodeForToken(code: string, _callbackPath: string):
   return tokens;
 }
 
-// Get stored tokens
-export function getStoredTokens(): AuthTokens | null {
+// Get stored tokens (with automatic refresh if needed)
+export async function getStoredTokens(): Promise<AuthTokens | null> {
   const stored = localStorage.getItem('spotify_tokens');
   if (!stored) return null;
 
   const tokens: AuthTokens = JSON.parse(stored);
 
-  // Check if token is expired
+  // If token is expired or will expire in next 5 minutes, refresh it
+  const fiveMinutesFromNow = Date.now() + 5 * 60 * 1000;
+  if (fiveMinutesFromNow >= tokens.expires_at) {
+    try {
+      console.log('Access token expired or expiring soon, refreshing...');
+      const refreshedTokens = await refreshAccessToken(tokens.refresh_token);
+      return refreshedTokens;
+    } catch (err) {
+      console.error('Failed to refresh token:', err);
+      // Token refresh failed, user needs to re-authenticate
+      return null;
+    }
+  }
+
+  return tokens;
+}
+
+// Synchronous version for SDK callback (uses cached token, doesn't refresh)
+export function getStoredTokensSync(): AuthTokens | null {
+  const stored = localStorage.getItem('spotify_tokens');
+  if (!stored) return null;
+
+  const tokens: AuthTokens = JSON.parse(stored);
+
+  // Just check if completely expired (don't try to refresh synchronously)
   if (Date.now() >= tokens.expires_at) {
     return null;
   }

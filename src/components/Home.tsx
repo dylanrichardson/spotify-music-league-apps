@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ROUNDS } from '../rounds/config';
-import { getStoredTokens, logout } from '../shared/spotify-auth';
+import { getStoredTokensSync, logout } from '../shared/spotify-auth';
 import { fetchUserProfile } from '../shared/spotify-api';
 import type { UserProfile } from '../rounds/types';
 
@@ -37,7 +37,7 @@ export function Home() {
     // Set page title
     document.title = "Joe's Garageband Explorer";
 
-    const tokens = getStoredTokens();
+    const tokens = getStoredTokensSync();
     setIsLoggedIn(!!tokens);
 
     if (tokens) {

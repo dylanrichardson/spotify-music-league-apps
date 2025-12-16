@@ -1,4 +1,4 @@
-import { getStoredTokens } from './spotify-auth';
+import { getStoredTokens, getStoredTokensSync } from './spotify-auth';
 
 // Extend Window interface for Spotify SDK
 declare global {
@@ -91,7 +91,7 @@ class SpotifyPlayerManager {
         return;
       }
 
-      const tokens = getStoredTokens();
+      const tokens = getStoredTokensSync();
       if (!tokens) {
         reject(new Error('No access token'));
         return;
@@ -100,7 +100,7 @@ class SpotifyPlayerManager {
       this.player = new window.Spotify.Player({
         name: 'Music League Helper',
         getOAuthToken: (cb) => {
-          const tokens = getStoredTokens();
+          const tokens = getStoredTokensSync();
           cb(tokens?.access_token || '');
         },
         volume: 0.5,
@@ -127,20 +127,14 @@ class SpotifyPlayerManager {
       });
 
       // Ready
-      this.player.addListener('ready', async ({ device_id }) => {
+      this.player.addListener('ready', ({ device_id }) => {
         console.log('Spotify Web Playback SDK ready with Device ID:', device_id);
 
-        // Immediately activate this device so it's ready for playback
-        try {
-          await this.activateDevice(device_id);
-          // Fetch the actual device ID from Spotify's API
-          this.deviceId = await this.getActiveDeviceId();
-          console.log('Device activated successfully, actual device ID:', this.deviceId);
-        } catch (err) {
-          console.warn('Failed to activate device immediately:', err);
-          // Fall back to the SDK-provided device ID
-          this.deviceId = device_id;
-        }
+        // Store device ID but DON'T activate it yet
+        // Only activate when user actually wants to play something
+        // This prevents interrupting playback on other devices
+        this.deviceId = device_id;
+        console.log('SDK device ready (not activated yet):', this.deviceId);
 
         resolve('sdk');
       });
@@ -176,7 +170,7 @@ class SpotifyPlayerManager {
   }
 
   async playTrack(trackUri: string): Promise<void> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       throw new Error('No authentication tokens');
     }
@@ -198,23 +192,15 @@ class SpotifyPlayerManager {
         const error = await response.json();
         console.error('Playback error:', error);
 
-        // If device not found, refresh our device ID and retry
+        // If device not found, activate our device and retry
         if (response.status === 404) {
-          console.log('Device not found, refreshing device ID...');
+          console.log('Device not found or not ready, activating device...');
 
-          // Re-fetch our device ID in case it changed
-          try {
-            this.deviceId = await this.getActiveDeviceId();
-            console.log('Refreshed device ID:', this.deviceId);
-          } catch (err) {
-            console.warn('Failed to refresh device ID, will try to activate:', err);
-          }
-
-          // Transfer playback to our (possibly refreshed) device
+          // Activate our SDK device
           await this.transferPlayback();
 
           // Wait a bit for activation to complete
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
           // Retry playback
           const retryResponse = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
@@ -231,7 +217,7 @@ class SpotifyPlayerManager {
           if (!retryResponse.ok) {
             const retryError = await retryResponse.json();
             console.error('Retry playback error:', retryError);
-            throw new Error('Failed to start playback. Please try again or select a different device.');
+            throw new Error('Failed to start playback. Please try refreshing the page.');
           }
         } else {
           throw new Error('Failed to start playback via SDK');
@@ -266,7 +252,7 @@ class SpotifyPlayerManager {
   }
 
   async togglePlay(): Promise<void> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       throw new Error('No authentication tokens');
     }
@@ -312,7 +298,7 @@ class SpotifyPlayerManager {
   }
 
   private async activateDevice(deviceId: string): Promise<void> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       throw new Error('Cannot activate device: no tokens');
     }
@@ -335,35 +321,6 @@ class SpotifyPlayerManager {
     }
   }
 
-  private async getActiveDeviceId(): Promise<string> {
-    const tokens = getStoredTokens();
-    if (!tokens) {
-      throw new Error('Cannot get device ID: no tokens');
-    }
-
-    const response = await fetch('https://api.spotify.com/v1/me/player/devices', {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch devices');
-    }
-
-    const data = await response.json();
-
-    // Find our device (Music League Helper)
-    const ourDevice = data.devices.find((d: any) => d.name === 'Music League Helper');
-
-    if (!ourDevice) {
-      throw new Error('Could not find Music League Helper device');
-    }
-
-    return ourDevice.id;
-  }
-
   private async transferPlayback(): Promise<void> {
     if (!this.deviceId) {
       throw new Error('No device ID available for transfer');
@@ -380,7 +337,7 @@ class SpotifyPlayerManager {
   }
 
   async getAvailableDevices(): Promise<SpotifyDevice[]> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       throw new Error('No authentication tokens');
     }
@@ -401,7 +358,7 @@ class SpotifyPlayerManager {
   }
 
   async getCurrentPlaybackState(): Promise<PlayerState | null> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       return null;
     }
@@ -489,7 +446,7 @@ class SpotifyPlayerManager {
   }
 
   async transferPlaybackToDevice(deviceId: string): Promise<void> {
-    const tokens = getStoredTokens();
+    const tokens = await getStoredTokens();
     if (!tokens) {
       throw new Error('No authentication tokens');
     }
