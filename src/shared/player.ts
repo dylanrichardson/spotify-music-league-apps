@@ -175,67 +175,13 @@ class SpotifyPlayerManager {
       throw new Error('No authentication tokens');
     }
 
-    if (this.mode === 'sdk' && this.deviceId) {
-      // Use Web Playback SDK - transfer playback to our device first
-      const response = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          uris: [trackUri],
-        }),
-      });
+    // First, check if there's already an active device with playback
+    const devices = await this.getAvailableDevices();
+    const activeDevice = devices.find(d => d.is_active);
 
-      if (!response.ok) {
-        const error = await response.json();
-        console.error('Playback error:', error);
-
-        // If device not found, find it via API and activate
-        if (response.status === 404) {
-          console.log('Device not found via SDK ID, querying devices API...');
-
-          // Wait a moment for SDK device to register with Spotify
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          // Find our device via the devices API
-          const apiDeviceId = await this.findOurDeviceId();
-
-          if (apiDeviceId) {
-            console.log('Found device via API:', apiDeviceId);
-            this.deviceId = apiDeviceId;
-
-            // Activate the device
-            await this.transferPlayback();
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Retry playback with the API-discovered device ID
-            const retryResponse = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bearer ${tokens.access_token}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                uris: [trackUri],
-              }),
-            });
-
-            if (!retryResponse.ok) {
-              const retryError = await retryResponse.json();
-              console.error('Retry playback error:', retryError);
-              throw new Error('Failed to start playback. Please try again.');
-            }
-          } else {
-            throw new Error('Could not find playback device. Please refresh the page.');
-          }
-        } else {
-          throw new Error('Failed to start playback via SDK');
-        }
-      }
-    } else if (this.mode === 'connect') {
-      // Use Connect API (fallback)
+    if (activeDevice) {
+      // There's already an active device - play on that device
+      console.log('Found active device, playing on:', activeDevice.name);
       const response = await fetch('https://api.spotify.com/v1/me/player/play', {
         method: 'PUT',
         headers: {
@@ -247,14 +193,91 @@ class SpotifyPlayerManager {
         }),
       });
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('No active device found. Please open Spotify on one of your devices.');
-        }
-        throw new Error('Failed to start playback');
+      if (!response.ok && response.status !== 204) {
+        throw new Error('Failed to start playback on active device');
       }
     } else {
-      throw new Error('Player not initialized');
+      // No active device - use our local device (SDK or Connect mode)
+      console.log('No active device found, playing locally');
+
+      if (this.mode === 'sdk' && this.deviceId) {
+        // Try playing on our SDK device
+        let response = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            uris: [trackUri],
+          }),
+        });
+
+        if (!response.ok) {
+          // Device not found - need to discover and activate it
+          if (response.status === 404) {
+            console.log('Device not found via SDK ID, discovering via API...');
+
+            // Wait for device to register
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            // Find our device via the API
+            const apiDeviceId = await this.findOurDeviceId();
+
+            if (apiDeviceId) {
+              console.log('Found device via API:', apiDeviceId);
+              this.deviceId = apiDeviceId;
+
+              // Activate the device
+              await this.transferPlayback();
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              // Retry playback
+              response = await fetch('https://api.spotify.com/v1/me/player/play?device_id=' + this.deviceId, {
+                method: 'PUT',
+                headers: {
+                  Authorization: `Bearer ${tokens.access_token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  uris: [trackUri],
+                }),
+              });
+
+              if (!response.ok && response.status !== 204) {
+                const retryError = await response.json();
+                console.error('Retry playback error:', retryError);
+                throw new Error('Failed to start playback. Please try again.');
+              }
+            } else {
+              throw new Error('Could not find playback device. Please refresh the page.');
+            }
+          } else {
+            throw new Error('Failed to start playback via SDK');
+          }
+        }
+      } else if (this.mode === 'connect') {
+        // Use Connect API (fallback) - play on any available device
+        const response = await fetch('https://api.spotify.com/v1/me/player/play', {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${tokens.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            uris: [trackUri],
+          }),
+        });
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('No active device found. Please open Spotify on one of your devices.');
+          }
+          throw new Error('Failed to start playback');
+        }
+      } else {
+        throw new Error('Player not initialized');
+      }
     }
 
     // Immediately poll to update UI, then start fast polling for quick updates
