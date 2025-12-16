@@ -328,9 +328,6 @@ export function Dashboard() {
                   Birth Year
                 </label>
               </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Enter any year between 1900 and 2024
-              </p>
             </div>
           </div>
 
